@@ -283,6 +283,8 @@ architecture top_arch of top is
             tx_std_clkout           : out std_logic;                      --           tx_std_clkout.tx_std_clkout
             rx_std_clkout           : out std_logic;                      --           rx_std_clkout.rx_std_clkout
             rx_std_wa_patternalign  : in  std_logic; --  rx_std_wa_patternalign.rx_std_wa_patternalign
+            tx_std_polinv           : in  std_logic; --           tx_std_polinv.tx_std_polinv
+            rx_std_polinv           : in  std_logic; --           rx_std_polinv.rx_std_polinv
             tx_std_elecidle         : in  std_logic; --         tx_std_elecidle.tx_std_elecidle
             rx_std_signaldetect     : out std_logic;                      --     rx_std_signaldetect.rx_std_signaldetect
             tx_cal_busy             : out std_logic;                      --             tx_cal_busy.tx_cal_busy
@@ -349,6 +351,10 @@ architecture top_arch of top is
             reconfig_mgmt_waitrequest : out std_logic;                                         --                   .waitrequest
             reconfig_mgmt_write       : in  std_logic;             --                   .write
             reconfig_mgmt_writedata   : in  std_logic_vector(31 downto 0); --                   .writedata
+            reconfig_mif_address      : out std_logic_vector(31 downto 0);                     --       reconfig_mif.address
+            reconfig_mif_read         : out std_logic;                                         --                   .read
+            reconfig_mif_readdata     : in  std_logic_vector(15 downto 0); --                   .readdata
+            reconfig_mif_waitrequest  : in  std_logic;             --                   .waitrequest
             reconfig_to_xcvr          : out std_logic_vector(139 downto 0);                    --   reconfig_to_xcvr.reconfig_to_xcvr
             reconfig_from_xcvr        : in  std_logic_vector(91 downto 0)  -- reconfig_from_xcvr.reconfig_from_xcvr
         );
@@ -509,6 +515,10 @@ architecture top_arch of top is
             tx_std_clkout           => txclkout,
             rx_std_clkout           => rxclkout,
             rx_std_wa_patternalign  => do_word_align,
+
+            tx_std_polinv           => '0',
+            rx_std_polinv           => '1', -- because the p/n pairs are reversed during soldering on the rx side, need to reverse the polarity manually.
+
             tx_std_elecidle         => tx_forceelecidle,
             rx_std_signaldetect     => rx_signaldetect,
             tx_cal_busy             => tx_cal_busy,
@@ -539,6 +549,10 @@ architecture top_arch of top is
             --reconfig_mgmt_waitrequest
             reconfig_mgmt_write       => '0',
             reconfig_mgmt_writedata   => (others => '0'),
+--            reconfig_mif_address      : out std_logic_vector(31 downto 0);                     --       reconfig_mif.address
+--            reconfig_mif_read         : out std_logic;                                         --                   .read
+            reconfig_mif_readdata     => (others => '0'),
+            reconfig_mif_waitrequest  => '0',
             reconfig_to_xcvr          => reconfig_to_xcvr,
             reconfig_from_xcvr        => reconfig_from_xcvr
         );
