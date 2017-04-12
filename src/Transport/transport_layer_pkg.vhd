@@ -5,7 +5,7 @@ use ieee.numeric_std.all;       --! Use numeric standard
 package transport_layer_pkg is
 
 	constant DATA_WIDTH : integer := 32;
-	constant BUFFER_DEPTH : integer := 128; --Using 16 dword buffers for simulation, 128 for minimum data sector size hardware test, final will be 2048
+	constant BUFFER_DEPTH : integer := 16; --Using 16 dword buffers for simulation, 128 for minimum data sector size hardware test, final will be 2048
 	--constant WRITE_SECTOR_COUNT : std_logic_vector(15 downto 0) := x"0010";
 	constant DWORDS_PER_SECTOR : integer := 128;
 	constant WRITE_SECTOR_COUNT : std_logic_vector := std_logic_vector(to_unsigned(BUFFER_DEPTH/DWORDS_PER_SECTOR,16));
