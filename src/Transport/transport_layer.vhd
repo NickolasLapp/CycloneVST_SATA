@@ -142,6 +142,9 @@ signal pause_just_finished  : std_logic;
 
     --======================================================================================
 
+    signal s_data_to_link : std_logic_vector (DATA_WIDTH - 1 downto 0);
+    signal tx_buffer_data_valid : std_logic;
+
 begin
 
     tx_buffer_0 : buffer_2prt_ram
@@ -458,13 +461,13 @@ begin
             tx_read_ptr <= 0;
             rx_write_ptr <= 0;
             tx_rd_ptr_var := 0;
-            tx_read_addr <= (others => (others => '0'));
+            --tx_read_addr <= (others => (others => '0'));
 
             tx_index <= 0;
             device_ready <= '0';
-            data_to_link <= (others => '1');
+            s_data_to_link <= (others => '1');
         elsif(rising_edge(clk))then
-            if(pause = '0') then
+            if(pause = '0') then --THIS BREAKS THE RAM STUFF!!!!
                 case (current_state) is
                 ----------------------------------------------- -----------------------------------------------
                     -- Idle SM states (top level)
@@ -489,10 +492,13 @@ begin
                         tx_read_ptr <= 0;
                         tx_rd_ptr_var := 0;
                         rx_write_ptr <= 0;
-                        tx_read_addr <= (others => (others => '0'));
+                        --tx_read_addr <= (others => (others => '0'));
                         tx_index <= 0;
                         device_ready <= '0';
-                        data_to_link <= (others => '1');
+                        s_data_to_link <= (others => '1');
+                        tx_buffer_data_valid <= '0';
+
+
                     when transport_init_start =>
                         rx_from_link_ready <= '1';
                         tx_fis_array(tx_index).fis_type <= REG_HOST_TO_DEVICE;
@@ -509,37 +515,37 @@ begin
                         tx_fis_array(tx_index).aux <= x"00000000";
                     when transport_init_end =>
                         rx_from_link_ready <= '1';
-                        data_to_link <= (others => '1');
+                        s_data_to_link <= (others => '1');
                     when identify_device_0 =>
                         rx_from_link_ready <= '0';
                         tx_to_link_request <= '1';
-                        data_to_link <= tx_fis_array(tx_index).features & tx_fis_array(tx_index).command &
+                        s_data_to_link <= tx_fis_array(tx_index).features & tx_fis_array(tx_index).command &
                                        tx_fis_array(tx_index).crrr_pm & tx_fis_array(tx_index).fis_type;
                     when identify_device_1 =>
-                        data_to_link <= tx_fis_array(tx_index).device & tx_fis_array(tx_index).lba;
+                        s_data_to_link <= tx_fis_array(tx_index).device & tx_fis_array(tx_index).lba;
                     when identify_device_2 =>
-                        data_to_link <= tx_fis_array(tx_index).features_ext &
+                        s_data_to_link <= tx_fis_array(tx_index).features_ext &
                                         tx_fis_array(tx_index).lba_ext;
                     when identify_device_3 =>
-                        data_to_link <= tx_fis_array(tx_index).control & tx_fis_array(tx_index).icc &
+                        s_data_to_link <= tx_fis_array(tx_index).control & tx_fis_array(tx_index).icc &
                                         tx_fis_array(tx_index).count;
                     when identify_device_4 =>
-                        data_to_link <= tx_fis_array(tx_index).aux;
+                        s_data_to_link <= tx_fis_array(tx_index).aux;
                     when rx_pio_setup =>
                         tx_to_link_request <= '0';
                         rx_from_link_ready <= '1';
-                        data_to_link <= x"AAAAAAAA";
+                        s_data_to_link <= x"AAAAAAAA";
                     when rx_identify_packet =>
-                        data_to_link <= x"BBBBBBBB";
+                        s_data_to_link <= x"BBBBBBBB";
                     when wait_for_fis_end =>
                         tx_to_link_request <= '0';
                         rx_from_link_ready <= '1';
-                        data_to_link <= x"00BEEF00";
+                        s_data_to_link <= x"00BEEF00";
                     when transport_idle =>
                         device_ready <= '1';
                         rx_from_link_ready <= '0';
                         tx_to_link_request <= '0';
-                        data_to_link <= x"AAAAAAAA";
+                        s_data_to_link <= x"AAAAAAAA";
 
                         if(rx_buffer_empty(0) = '1')then rx_buffer_full(0) <= '0'; end if;
                         if(rx_buffer_empty(1) = '1')then rx_buffer_full(1) <= '0'; end if;
@@ -568,7 +574,7 @@ begin
                     -- DMA Write EXT SM states
                     when dma_write_idle     =>
                         --build register host to device DMA Write FIS
-                        tx_read_addr <= (others => (others => '0'));
+                        --tx_read_addr <= (others => (others => '0'));
                         tx_read_ptr <= 0;
                         tx_rd_ptr_var := 0;
 
@@ -586,43 +592,42 @@ begin
                         tx_fis_array(tx_index).aux <= x"00000000";
                     when dma_write_reg_fis_0    =>
                         tx_to_link_request <= '1';
-                        data_to_link <= tx_fis_array(tx_index).features & tx_fis_array(tx_index).command &
+                        s_data_to_link <= tx_fis_array(tx_index).features & tx_fis_array(tx_index).command &
                                        tx_fis_array(tx_index).crrr_pm & tx_fis_array(tx_index).fis_type;
                     when dma_write_reg_fis_1    =>
-                        data_to_link <= tx_fis_array(tx_index).device & tx_fis_array(tx_index).lba;
+                        s_data_to_link <= tx_fis_array(tx_index).device & tx_fis_array(tx_index).lba;
                     when dma_write_reg_fis_2    =>
-                        data_to_link <= tx_fis_array(tx_index).features_ext &
+                        s_data_to_link <= tx_fis_array(tx_index).features_ext &
                                        tx_fis_array(tx_index).lba_ext;
                     when dma_write_reg_fis_3    =>
-                        data_to_link <= tx_fis_array(tx_index).control & tx_fis_array(tx_index).icc &
+                        s_data_to_link <= tx_fis_array(tx_index).control & tx_fis_array(tx_index).icc &
                                        tx_fis_array(tx_index).count;
                     when dma_write_reg_fis_4    =>
-                        data_to_link <= tx_fis_array(tx_index).aux;
+                        s_data_to_link <= tx_fis_array(tx_index).aux;
                     when dma_write_chk_activate =>
                         tx_to_link_request <= '0';
                         rx_from_link_ready <= '1';
-                        data_to_link <= x"F0F0F0F0";
+                        s_data_to_link <= x"F0F0F0F0";
                     --when dma_write_data_idle => --Activate received, wait until link is ready for data
                     --    rx_from_link_ready <= '0';
-                    --    data_to_link <= x"0F0F0F0F";
+                    --    s_data_to_link <= x"0F0F0F0F";
                     when dma_write_data_fis =>
                         rx_from_link_ready <= '0';
                         tx_to_link_request <= '1';
-                        data_to_link <=  x"000000" & DATA_FIS;
+                        s_data_to_link <=  x"000000" & DATA_FIS;
                         if(pause = '0' and link_rdy = '1')then
                         --next state is dma_write_data_frame
-                            tx_read_ptr <= tx_read_ptr + 1;
-                            tx_rd_ptr_var := tx_rd_ptr_var + 1;
-                            tx_read_addr(tx_index) <= std_logic_vector(to_unsigned(tx_rd_ptr_var,DATA_WIDTH));
+                        --    tx_read_ptr <= tx_read_ptr + 1;
+                        --    tx_rd_ptr_var := tx_rd_ptr_var + 1;
+                        --    tx_read_addr(tx_index) <= std_logic_vector(to_unsigned(tx_rd_ptr_var,DATA_WIDTH));
                         end if;
                     when dma_write_data_frame   =>
                         if(pause = '0') then
-                            if(tx_read_ptr <= BUFFER_DEPTH)then
+                            if(tx_read_ptr < BUFFER_DEPTH)then
                                 tx_read_ptr <= tx_read_ptr + 1;
-                                tx_rd_ptr_var := tx_rd_ptr_var + 1;
-                                tx_read_addr(tx_index) <= std_logic_vector(to_unsigned(tx_rd_ptr_var,DATA_WIDTH));
-                                data_to_link <= tx_buf_data_out(tx_index);--add address
+                                tx_buffer_data_valid <= '1';
                             else
+                                tx_buffer_data_valid <= '0';
                                 tx_to_link_request <= '0';
                                 if(tx_index = 0) then
                                     tx0_locked <= '0';
@@ -630,12 +635,7 @@ begin
                                     tx1_locked <= '0';
                                 end if;
                             end if;
-                        else
-                                tx_read_ptr <= tx_read_ptr + 1;
-                                tx_rd_ptr_var := tx_rd_ptr_var + 1;
-                                tx_read_addr(tx_index) <= std_logic_vector(to_unsigned(tx_rd_ptr_var,DATA_WIDTH));
-                                data_to_link <= tx_buf_data_out(tx_index);--add address
-                            paused_data_to_link <= tx_buf_data_out(tx_index);--add address
+                        --else
                         end if;
                     when dma_write_chk_status   =>  ----UPDATE THIS STATE
                         rx_from_link_ready <= '1';
@@ -652,10 +652,10 @@ begin
                         end if;
                     when pause_data_tx =>
                         if(pause = '0')then
-                            data_to_link <= paused_data_to_link;
+                            --s_data_to_link <= paused_s_data_to_link;
                             tx_read_ptr <= tx_read_ptr + 1;
                         else
-                            data_to_link <= x"FFFFFFFF"; --value for debugging
+                            s_data_to_link <= x"FFFFFFFF"; --value for debugging
                         end if;
         --========================================================================================
                     -- DMA Read EXT SM states
@@ -678,18 +678,18 @@ begin
 
                     when dma_read_reg_fis_0 =>
                         tx_to_link_request <= '1';
-                        data_to_link <= rx_fis_array(rx_index).features & rx_fis_array(rx_index).command &
+                        s_data_to_link <= rx_fis_array(rx_index).features & rx_fis_array(rx_index).command &
                                        rx_fis_array(rx_index).crrr_pm & rx_fis_array(rx_index).fis_type;
                     when dma_read_reg_fis_1 =>
-                        data_to_link <= rx_fis_array(rx_index).device & rx_fis_array(rx_index).lba;
+                        s_data_to_link <= rx_fis_array(rx_index).device & rx_fis_array(rx_index).lba;
                     when dma_read_reg_fis_2 =>
-                        data_to_link <= rx_fis_array(rx_index).features_ext &
+                        s_data_to_link <= rx_fis_array(rx_index).features_ext &
                                        rx_fis_array(rx_index).lba_ext;
                     when dma_read_reg_fis_3 =>
-                        data_to_link <= rx_fis_array(rx_index).control & rx_fis_array(rx_index).icc &
+                        s_data_to_link <= rx_fis_array(rx_index).control & rx_fis_array(rx_index).icc &
                                        rx_fis_array(rx_index).count;
                     when dma_read_reg_fis_4 =>
-                        data_to_link <= rx_fis_array(rx_index).aux;
+                        s_data_to_link <= rx_fis_array(rx_index).aux;
                     when dma_read_data_fis  => --pick a buffer, must be completely empty
                         tx_to_link_request <= '0';
                         rx_from_link_ready <= '1';
@@ -742,6 +742,37 @@ begin
             end if;
         end if;
     end process;
+
+--=================================================================================================================
+--logic and processes to handle RAM access
+tx_buffer_reader : process (rst_n, pause, tx_read_ptr, tx_buffer_data_valid)
+  begin
+    if (rst_n = '0') then
+        tx_read_addr <= (others => (others => '0'));
+    elsif(tx_read_ptr < BUFFER_DEPTH and tx_buffer_data_valid = '1')then
+        if(pause = '0')then
+            tx_read_addr(tx_index) <= std_logic_vector(to_unsigned(tx_read_ptr,DATA_WIDTH));
+        else
+            tx_read_addr(tx_index) <= std_logic_vector(to_unsigned(tx_read_ptr-1,DATA_WIDTH));
+        end if;
+else
+        tx_read_addr <= (others => (others => '0'));
+    end if;
+end process;
+
+switch_data_to_link : process(pause, s_data_to_link, tx_buf_data_out,tx_buffer_data_valid)
+  begin
+    if(rst_n = '0')then
+        data_to_link <= (others => '0');
+    elsif(tx_buffer_data_valid = '1')then
+        data_to_link <= tx_buf_data_out(tx_index);
+    else
+        data_to_link <= s_data_to_link;
+    end if;
+end process;
+--tx_buffer_data_valid <= '1' when (current_state = dma_write_data_frame) else '0';
+--=================================================================================================================
+
 --=================================================================================================================
 --Processes to control the flow of user data to/from the tx/rx buffers
 --The dual-buffer system allows user data to be written to a buffer even when the Transort FSM is performing a command
