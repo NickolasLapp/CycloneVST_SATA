@@ -724,7 +724,9 @@ architecture top_arch of top is
                     end if;
 
                     if(user_cmd_to_trans_prev = "100" and app_receive_read_valid_prev = '1') then
-                        app_data_counter <= app_data_counter + 1;
+                        if(app_data_counter < BUFFER_DEPTH)then
+                            app_data_counter <= app_data_counter + 1;
+                        end if;
                         --something <= trans_data_to_user;
                         if (app_count_up = '1') then
                             if(trans_data_to_user /= std_logic_vector(to_unsigned(app_data_counter,DATA_WIDTH))) then

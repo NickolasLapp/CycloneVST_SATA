@@ -140,10 +140,13 @@ signal pause_just_finished  : std_logic;
     signal tx_buffer : double_buffer;
     signal rx_buffer : double_buffer;
 
+
+    signal rx_buffer_read_select : integer range 0 to 1;
     --======================================================================================
 
     signal s_data_to_link : std_logic_vector (DATA_WIDTH - 1 downto 0);
     signal tx_buffer_data_valid : std_logic;
+    signal rx_buffer_data_valid : std_logic;
 
 begin
 
@@ -454,7 +457,7 @@ begin
 
             rx_from_link_ready <= '0';
             tx_to_link_request <= '0';
-
+            rx_wren <= "00";
             tx_buffer_empty <= "11";
             rx_buffer_full <= "00";
 
@@ -489,6 +492,7 @@ begin
                         tx_buffer_empty <= "11";
                         rx_buffer_full <= "00";
 
+                        rx_wren <= "00";
                         tx_read_ptr <= 0;
                         tx_rd_ptr_var := 0;
                         rx_write_ptr <= 0;
@@ -497,7 +501,8 @@ begin
                         device_ready <= '0';
                         s_data_to_link <= (others => '1');
                         tx_buffer_data_valid <= '0';
-
+                        rx_buf_data_in <= (others => (others => '0'));
+                        rx_write_addr <= (others => (others => '0'));
 
                     when transport_init_start =>
                         rx_from_link_ready <= '1';
@@ -546,6 +551,7 @@ begin
                         rx_from_link_ready <= '0';
                         tx_to_link_request <= '0';
                         s_data_to_link <= x"AAAAAAAA";
+                        rx_wren <= "00";
 
                         if(rx_buffer_empty(0) = '1')then rx_buffer_full(0) <= '0'; end if;
                         if(rx_buffer_empty(1) = '1')then rx_buffer_full(1) <= '0'; end if;
@@ -744,7 +750,7 @@ begin
     end process;
 
 --=================================================================================================================
---logic and processes to handle RAM access
+--logic and processes to handle tx read RAM access
 tx_buffer_reader : process (rst_n, pause, tx_read_ptr, tx_buffer_data_valid)
   begin
     if (rst_n = '0') then
@@ -790,6 +796,8 @@ end process;
             tx_buffer_full(1) <= '0';
             tx_wren <= "00";
             tx_write_addr <= (others => (others => '0'));
+            tx_buf_data_in <= (others => (others => '0'));
+            lba <= (others => '0');
         elsif(rising_edge(clk)) then
 
             if(tx_buffer_full(0) = '0' and tx0_locked = '0')then
@@ -836,15 +844,17 @@ end process;
 
 
 rx_buffer_control_reads : process(clk, rst_n)
-    variable rx_buffer_read_select : integer range 0 to 1;
+    --variable rx_buffer_read_select : integer range 0 to 1;
     variable user_rx_read_valid : std_logic;
+    variable rx_rd_ptr_var : integer range 0 to BUFFER_DEPTH := 0;
       begin
         if(rst_n = '0') then
             rx_read_ptr <= 0;
+            rx_rd_ptr_var := 0;
             user_rx_read_valid := '0';
-            data_to_user <= x"00000000";
             address_to_user <= x"00000000";
             rx_buffer_empty <= "11";--both buffers start empty after reset
+            rx_buffer_data_valid <= '0';
         elsif(rising_edge(clk)) then
 
             --if we are writing to one of the buffers it is no longer empty
@@ -857,10 +867,10 @@ rx_buffer_control_reads : process(clk, rst_n)
             end if;
 
             if(rx0_locked = '0' and rx_buffer_empty(0) = '0')then
-                rx_buffer_read_select := 0;
+                rx_buffer_read_select <= 0;
                 user_rx_read_valid := '1';
             elsif(rx1_locked = '0' and rx_buffer_empty(1) = '0')then
-                rx_buffer_read_select := 1;
+                rx_buffer_read_select <= 1;
                 user_rx_read_valid := '1';
             else
                 user_rx_read_valid := '0';
@@ -868,19 +878,46 @@ rx_buffer_control_reads : process(clk, rst_n)
 
             if(user_command(2) = '1' and user_rx_read_valid = '1') then
                 --give user read address?
-                rx_read_addr(rx_buffer_read_select) <= std_logic_vector(to_unsigned(rx_read_ptr,DATA_WIDTH));
-                data_to_user <= rx_buf_data_out(rx_buffer_read_select);
-
-                if(rx_read_ptr < BUFFER_DEPTH - 1)then
+                if(rx_read_ptr < BUFFER_DEPTH)then
                     rx_read_ptr <= rx_read_ptr + 1;
+                    rx_rd_ptr_var := rx_rd_ptr_var + 1;
+                    rx_buffer_data_valid <= '1';
                 else
                     rx_read_ptr <= 0;
+                    rx_rd_ptr_var := 0;
                     rx_buffer_empty(rx_buffer_read_select) <= '1';
+                    rx_buffer_data_valid <= '0';
                 end if;
             end if;
-
         end if;
     end process;
+
+--=================================================================================================================
+--logic and processes to handle rx read RAM access
+    rx_buffer_reader : process (rst_n, pause, rx_read_ptr)
+      begin
+        if (rst_n = '0') then
+            rx_read_addr <= (others => (others => '0'));
+        elsif(rx_read_ptr < BUFFER_DEPTH)then
+            rx_read_addr(rx_index) <= std_logic_vector(to_unsigned(rx_read_ptr,DATA_WIDTH));
+        else
+            rx_read_addr <= (others => (others => '0'));
+        end if;
+    end process;
+
+    switch_data_to_user : process(rst_n,rx_buf_data_out, rx_buffer_data_valid)
+        begin
+        if(rst_n = '0')then
+            data_to_user <= (others => '0');
+        elsif(rx_buffer_data_valid = '1')then
+            data_to_user <= rx_buf_data_out(rx_buffer_read_select);
+        else
+            data_to_user <= (others => '0');
+        end if;
+    end process;
+--=================================================================================================================
+
+
 --============================================================================
     link_fis_type <= data_from_link(7 downto 0);
 --============================================================================

@@ -115,13 +115,16 @@ begin
 		for i in 0 to 23 loop wait until rising_edge(clk); end loop;
 		status_from_link_tb <= "10011111"; wait until rising_edge(clk);
 		data_from_link_tb <= x"00000046"; wait until rising_edge(clk);
-		for i in 0 to 15 loop
+		for i in 0 to BUFFER_DEPTH - 1 loop
 			data_from_link_tb <= std_logic_vector(to_unsigned(i,32)); wait until rising_edge(clk);
 		end loop;
-
+		status_from_link_tb <= "00011111"; wait until rising_edge(clk);
 		for i in 0 to 21 loop wait until rising_edge(clk); end loop;
+		status_from_link_tb <= "10011111"; wait until rising_edge(clk);
 		data_from_link_tb <= x"00000034"; wait until rising_edge(clk);
-		for i in 0 to 63 loop wait until rising_edge(clk); end loop;
+		for i in 0 to 3 loop wait until rising_edge(clk); end loop;
+		status_from_link_tb <= "00011111"; wait until rising_edge(clk);
+		for i in 0 to BUFFER_DEPTH*10 loop wait until rising_edge(clk); end loop;
 	end process;
 
 	trans_rx_from_link_ready <= status_to_link_tb(6);
