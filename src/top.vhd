@@ -51,6 +51,7 @@ architecture top_arch of top is
     -- top level signals
     signal clk25            : std_logic;
     signal clk50            : std_logic;
+    signal si_reset            : std_logic;
     signal reset            : std_logic;
     signal cold_reset_n     : std_logic;
 
@@ -542,7 +543,7 @@ architecture top_arch of top is
         port map (
             reconfig_busy             => reconfig_busy,
             mgmt_clk_clk              => clk25,
-            mgmt_rst_reset            => reset,
+            mgmt_rst_reset            => si_reset,
             reconfig_mgmt_address     => (others => '0'),
             reconfig_mgmt_read        => '0',
             --reconfig_mgmt_readdata
@@ -576,7 +577,7 @@ architecture top_arch of top is
     xcvr_reset1 : xcvr_reset
         port map (
             clock              => clk50,
-            reset              => reset,
+            reset              => si_reset,
             pll_powerdown      => pll_powerdown,
             tx_analogreset     => tx_analogreset,
             tx_digitalreset    => tx_digitalreset,
@@ -613,7 +614,8 @@ architecture top_arch of top is
     i_switch_debounce_1 : Debounce
         port map(clk50, USER_SW_1, switch_1);
 
-    reset <= not switch_0;
+    si_reset <= not switch_0;
+    reset <= si_reset or not pll_locked;
     rst_n <= not reset;
 
     LED0_N_PL <= '0' when switch_0 = '1' else 'Z';
@@ -628,7 +630,7 @@ architecture top_arch of top is
         )
         port map(
             clk             => clk50,
-            reset           => reset,
+            reset           => si_reset,
 
             done            => i2c_done,
             error           => i2c_error,

@@ -261,7 +261,11 @@ architecture PhyLayerInit_arch of PhyLayerInit is
                     forceActive    <= '0';
                     tx_data <= ALIGNp;
                     tx_datak <= DATAK_BYTE_ZERO;
-                    oobSignalToSend <= COMWAKE;
+                    if(oobTxIdle = '1') then
+                        oobSignalToSend <= COMWAKE;
+                    else
+                        oobSignalToSend <= NONE;
+                    end if;
                 when    HP5_HR_AwaitCOMWAKE         =>
                 -- Quiescent
                     forceQuiescent <= '1';
@@ -271,8 +275,8 @@ architecture PhyLayerInit_arch of PhyLayerInit is
                     oobSignalToSend <= NONE;
                 when    HP5B_HR_AwaitNoCOMWAKE      =>
                 -- Quiescent
-                    forceActive    <= '0';
                     forceQuiescent <= '1';
+                    forceActive    <= '0';
                     tx_data <= ALIGNp;
                     tx_datak <= DATAK_BYTE_ZERO;
                     oobSignalToSend <= NONE;
@@ -298,6 +302,8 @@ architecture PhyLayerInit_arch of PhyLayerInit is
                                 signalStableTime <= (others => '0');
                                 stableData <= (others => '0');
                                 stableErrDetect <= (others => '1');
+                            else
+                                do_word_align <= retryTimeElapsed(6);
                             end if;
                         else
                             do_word_align <= retryTimeElapsed(6);
@@ -418,7 +424,9 @@ architecture PhyLayerInit_arch of PhyLayerInit is
                 end if;
 
             when    HP6_HR_AwaitAlign           =>
-                if(rx_syncstatus = ALL_WORDS_SYNC and is_byte_ordered = '1' and rx_ordered_data_s = ALIGNp and lock_done = '1' and signalStableTime > 32) then
+                if(rx_signaldetect = '0') then
+                    phyInitNextState <= HP4_HR_COMWAKE;
+                elsif(rx_syncstatus = ALL_WORDS_SYNC and is_byte_ordered = '1' and rx_ordered_data_s = ALIGNp and lock_done = '1' and signalStableTime > 32) then
                     phyInitNextState <= HP7_HR_SendAlign;
                 elsif(retryTimeElapsed > ALIGN_INTERVAL and phyInitState = phyInitPrevState) then
                     phyInitNextState <= HP1_HR_RESET;
@@ -427,14 +435,20 @@ architecture PhyLayerInit_arch of PhyLayerInit is
                 end if;
 
             when    HP7_HR_SendAlign            =>
-                if(consecutiveNonAligns >= 3) then
+                if(rx_signaldetect = '0') then
+                    phyInitNextState <= HP4_HR_COMWAKE;
+                elsif(consecutiveNonAligns >= 3) then
                     phyInitNextState <= HP8_HR_Ready;
                 else
                     phyInitNextState <= HP7_HR_SendAlign;
                 end if;
 
             when    HP8_HR_Ready                =>
-                phyInitNextState <= HP8_HR_Ready;
+                if(rx_signaldetect = '0') then
+                    phyInitNextState <= HP1_HR_Reset;
+                else
+                    phyInitNextState <= HP8_HR_Ready;
+                end if;
 
             when    HP9_HR_Partial              =>
                 -- currently not supported. Should never end here
