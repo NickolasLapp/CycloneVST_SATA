@@ -113,10 +113,10 @@ architecture top_arch of top is
     signal tx_data_from_link        : std_logic_vector(31 downto 0);
     signal rx_data_to_link          : std_logic_vector(31 downto 0);
 
-    signal trans_status_in          : std_logic_vector(7 downto 0);
-    signal trans_status_out         : std_logic_vector(7 downto 0);
-    signal trans_tx_data_in         : std_logic_vector(31 downto 0);
-    signal trans_rx_data_out        : std_logic_vector(31 downto 0);
+    signal trans_status_to_link          : std_logic_vector(7 downto 0);
+    signal link_status_to_trans         : std_logic_vector(7 downto 0);
+    signal trans_tx_data_from_trans         : std_logic_vector(31 downto 0);
+    signal trans_rx_data_to_trans        : std_logic_vector(31 downto 0);
     signal rst_n                    : std_logic;
 
     --signal declarations for dummy application process
@@ -124,7 +124,8 @@ architecture top_arch of top is
     signal user_data_to_trans : std_logic_vector(DATA_WIDTH - 1 downto 0);
     signal user_address_to_trans : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
-    signal trans_status_to_user : std_logic_vector(3 downto 0);
+    signal clear_errors : std_logic;
+    signal trans_status_to_user : std_logic_vector(5 downto 0);
     signal trans_data_to_user : std_logic_vector(DATA_WIDTH - 1 downto 0);
     signal trans_address_to_user : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
@@ -196,7 +197,8 @@ architecture top_arch of top is
             address_from_user   :   in std_logic_vector(DATA_WIDTH - 1 downto 0);
 
             user_command            :   in std_logic_vector(2 downto 0);
-            status_to_user          :   out std_logic_vector(3 downto 0);
+            clear_errors            :   in std_logic;
+            status_to_user          :   out std_logic_vector(5 downto 0);
 
             data_to_user       :   out std_logic_vector(DATA_WIDTH - 1 downto 0);
             address_to_user    :   out std_logic_vector(DATA_WIDTH - 1 downto 0);
@@ -215,17 +217,16 @@ architecture top_arch of top is
             rst_n           :   in std_logic;
 
             --Interface with Transport Layer
-            trans_status_in :   in std_logic_vector(7 downto 0);        -- [FIFO_RDY/n, transmit request, data complete, escape, bad FIS, error, good FIS]
-            trans_status_out:   out std_logic_vector(7 downto 0);       -- [Link Idle, transmit bad status, transmit good status, crc good/bad, comm error, fail transmit]
-            tx_data_in      :   in std_logic_vector(31 downto 0);
-            rx_data_out     :   out std_logic_vector(31 downto 0);
+            trans_status_to_link :   in std_logic_vector(7 downto 0);        -- [FIFO_RDY/n, transmit request, data complete, escape, bad FIS, error, good FIS]
+            link_status_to_trans:   out std_logic_vector(7 downto 0);       -- [Link Idle, transmit bad status, transmit good status, crc good/bad, comm error, fail transmit]
+            tx_data_from_trans      :   in std_logic_vector(31 downto 0);
+            rx_data_to_trans     :   out std_logic_vector(31 downto 0);
 
             --Interface with Physical Layer
-            tx_data_out     :   out std_logic_vector(31 downto 0);
-            rx_data_in      :   in std_logic_vector(31 downto 0);
-            phy_status_in   :   in std_logic_vector(3 downto 0);        -- [primitive, PHYRDY/n, Dec_Err]
-            phy_status_out  :   out std_logic_vector(1 downto 0);       -- [primitive, clear status signals]
-            perform_init    :   out std_logic);
+            tx_data_to_phy     :   out std_logic_vector(31 downto 0);
+            rx_data_from_phy      :   in std_logic_vector(31 downto 0);
+            phy_status_to_link   :   in std_logic_vector(3 downto 0);        -- [primitive, PHYRDY/n, Dec_Err]
+            link_status_to_phy  :   out std_logic_vector(1 downto 0));       -- [primitive, clear status signals]
     end component;
 
     component phy_layer_32bit is
@@ -411,10 +412,10 @@ architecture top_arch of top is
     --port map(
     --        fabric_clk => txclkout,
     --        reset      => rst_n,
-    --        trans_status_to_link => trans_status_in,
-    --        link_status_to_trans => trans_status_out,
-    --        tx_data_to_link      => trans_tx_data_in,
-    --        rx_data_from_link    => trans_rx_data_out
+    --        trans_status_to_link => trans_status_to_link,
+    --        link_status_to_trans => link_status_to_trans,
+    --        tx_data_to_link      => trans_tx_data_from_trans,
+    --        rx_data_from_link    => trans_rx_data_to_trans
     --    );
     i_transport_layer1 : transport_layer
         port map(
@@ -427,17 +428,18 @@ architecture top_arch of top is
             address_from_user => user_address_to_trans,
 
             user_command => user_cmd_to_trans,
+            clear_errors => clear_errors,
             status_to_user => trans_status_to_user,
 
             data_to_user => trans_data_to_user,
             address_to_user => trans_address_to_user,
 
             --Interface with Link Layer
-            status_to_link => trans_status_in,
+            status_to_link => trans_status_to_link,
 
-            status_from_link => trans_status_out,
-            data_to_link => trans_tx_data_in,
-            data_from_link => trans_rx_data_out
+            status_from_link => link_status_to_trans,
+            data_to_link => trans_tx_data_from_trans,
+            data_from_link => trans_rx_data_to_trans
             );
 
 
@@ -447,17 +449,16 @@ architecture top_arch of top is
             rst_n           => rst_n,
 
             --Interface with Transport Layer
-            trans_status_in => trans_status_in,
-            trans_status_out=> trans_status_out,
-            tx_data_in      => trans_tx_data_in,
-            rx_data_out     => trans_rx_data_out,
+            trans_status_to_link => trans_status_to_link,
+            link_status_to_trans=> link_status_to_trans,
+            tx_data_from_trans      => trans_tx_data_from_trans,
+            rx_data_to_trans     => trans_rx_data_to_trans,
 
             --Interface with Physical Layer
-            tx_data_out     => tx_data_from_link,
-            rx_data_in      => rx_data_to_link,
-            phy_status_in   => phy_status_to_link,
-            phy_status_out  => link_status_to_phy
---            perform_init    => perform_init
+            tx_data_to_phy     => tx_data_from_link,
+            rx_data_from_phy      => rx_data_to_link,
+            phy_status_to_link   => phy_status_to_link,
+            link_status_to_phy  => link_status_to_phy
         );
 
     i_phy_layer_1 : phy_layer_32bit
@@ -470,7 +471,7 @@ architecture top_arch of top is
             rx_data_to_link      => rx_data_to_link,
             phy_status_to_link   => phy_status_to_link,
             link_status_to_phy   => link_status_to_phy,
-    --        perform_init     :   out std_logic); -- currently unused
+
 
             --Interface with transceivers
             rxclkout         => rxclkout,
@@ -766,6 +767,7 @@ architecture top_arch of top is
         end if;
     end process;
 
+    clear_errors <= '1'; --always clear errors and resume operation
     msata_device_ready <= trans_status_to_user(0);
     app_write_valid <= trans_status_to_user(1);
     app_send_read_valid <= trans_status_to_user(2);

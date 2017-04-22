@@ -100,8 +100,9 @@ architecture top_sim_arch of top_sim is
     signal user_cmd_to_trans : std_logic_vector(2 downto 0);
     signal user_data_to_trans : std_logic_vector(DATA_WIDTH - 1 downto 0);
     signal user_address_to_trans : std_logic_vector(DATA_WIDTH - 1 downto 0);
+    signal clear_errors : std_logic;
 
-    signal trans_status_to_user : std_logic_vector(3 downto 0);
+    signal trans_status_to_user : std_logic_vector(5 downto 0);
     signal trans_data_to_user : std_logic_vector(DATA_WIDTH - 1 downto 0);
     signal trans_address_to_user : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
@@ -133,7 +134,8 @@ architecture top_sim_arch of top_sim is
             address_from_user   :   in std_logic_vector(DATA_WIDTH - 1 downto 0);
 
             user_command            :   in std_logic_vector(2 downto 0);
-            status_to_user          :   out std_logic_vector(3 downto 0);
+            clear_errors            :   in std_logic;
+            status_to_user          :   out std_logic_vector(5 downto 0);
 
             data_to_user       :   out std_logic_vector(DATA_WIDTH - 1 downto 0);
             address_to_user    :   out std_logic_vector(DATA_WIDTH - 1 downto 0);
@@ -180,6 +182,7 @@ architecture top_sim_arch of top_sim is
             address_from_user => user_address_to_trans,
 
             user_command => user_cmd_to_trans,
+            clear_errors => clear_errors,
             status_to_user => trans_status_to_user,
 
             data_to_user => trans_data_to_user,

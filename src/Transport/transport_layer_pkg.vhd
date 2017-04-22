@@ -13,7 +13,7 @@ package transport_layer_pkg is
 	--States for Transport FSM
 	  type State_Type is (
 
-	                    transport_reset, transport_idle,
+	                    transport_reset, transport_idle, report_error,
 						--================================================
 	                    --Init States
 	                    transport_init_start, transport_init_end, identify_device_0,
