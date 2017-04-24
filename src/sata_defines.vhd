@@ -52,15 +52,15 @@ package sata_defines is
         -- trans_status_in
     constant c_l_pause_transmit     : integer := 7;                     -- Asserted when Transport Layer is not ready to transmit
     constant c_l_fifo_ready         : integer := 6;                     -- Asserted when Transport Layer FIFO has room for more data
-    constant c_l_transmit_request   : integer := 5;                     -- Asserted when Transport Layer wants to begin a transmission
-    constant c_l_data_done          : integer := 4;                     -- Asserted the clock cycle after the last of the Transport Layer data has been transmitted
+    constant c_l_transmit_request   : integer := 5;                     -- Asserted when Transport Layer wants to transmit a FIS
     constant c_l_escape             : integer := 3;                     -- Asserted when the Transport Layer wants to terminate a transmission
     constant c_l_bad_fis            : integer := 2;                     -- Asserted at the end of a "read" when a bad FIS is received by the Transport Layer
     constant c_l_error              : integer := 1;                     -- Asserted at the end of a "read" when there is a different error in the FIS received by the Transport Layer
     constant c_l_good_fis           : integer := 0;                     -- Asserted at the end of a "read" when a good FIS is received by the Transport Layer
         -- trans_status_out
     constant c_l_rcv_data_valid     : integer := 7;                     -- Asserted when the receive data being sent to the Transport Layer is valid
-    constant c_l_link_idle          : integer := 5;                     -- Asserted when the Link Layer is in the Idle state and is ready for a transmit request
+    constant c_l_phy_paused         : integer := 6;                     -- Asserted when the Physical Layer is pausing the transmission (generally for ALIGNp)
+    constant c_l_link_ready         : integer := 5;                     -- Asserted when the Link Layer is in the Idle state and is ready for a transmit request
     constant c_l_transmit_bad       : integer := 4;                     -- Asserted at the end of transmission to indicate in error
     constant c_l_transmit_good      : integer := 3;                     -- Asserted at the end of transmission to successful transmission
     constant c_l_crc_good           : integer := 2;                     -- Asserted when the CRC has been verified

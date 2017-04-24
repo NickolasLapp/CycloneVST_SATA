@@ -426,10 +426,10 @@ architecture top_arch of top is
 
             --Interface with Application Layer
             data_from_user => user_data_to_trans,
-            clear_errors => clear_errors,
             address_from_user => user_address_to_trans,
 
             user_command => user_cmd_to_trans,
+            clear_errors => clear_errors,
             status_to_user => trans_status_to_user,
 
             data_to_user => trans_data_to_user,
