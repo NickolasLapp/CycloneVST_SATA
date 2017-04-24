@@ -74,14 +74,10 @@ architecture transport_layer_arch of transport_layer is
     signal error        : std_logic_vector(7 downto 0); --used only for device to host
     --======================================================================================
 
-<<<<<<< HEAD
     signal error_address : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
     signal last_read_address : data_width_array_type;
 
-=======
-    signal last_read_address, error_address : std_logic_vector(DATA_WIDTH - 1 downto 0);
->>>>>>> 72e85df43ec39268e1b48fb635ff32ccb0af967a
     signal command_error, read_error, write_error : std_logic;
 
     signal tx_fis_array, rx_fis_array   :   register_fis_array_type; -- signals to hold host to device register FIS contents
@@ -203,11 +199,7 @@ begin
     end process;
 
     transport_next_state_logic: process (current_state, status_from_link, link_rdy, data_from_link,link_fis_type, user_command,rst_n,pause, tx_index,
-<<<<<<< HEAD
                                          rx_index, tx_buffer_full, rx_buffer_full, tx_read_ptr, data_from_link_valid, read_error, write_error, link_error)
-=======
-                                         rx_index, tx_buffer_full, rx_buffer_full, tx_read_ptr, data_from_link_valid, read_error, write_error)
->>>>>>> 72e85df43ec39268e1b48fb635ff32ccb0af967a
       begin
         case (current_state) is
         ----------------------------------------------- -----------------------------------------------
@@ -332,11 +324,7 @@ begin
             when dma_write_chk_activate =>
                 if (link_fis_type = DMA_ACTIVATE_FIS) then
                     next_state <= dma_write_data_fis;
-<<<<<<< HEAD
                 elsif ((data_from_link (7 downto 0) = REG_DEVICE_TO_HOST and (data_from_link(STATUS_ERR) = '1' or data_from_link(STATUS_DF) = '1')) or link_error = '1') then
-=======
-                elsif (link_error = '1' or link_fis_type = REG_DEVICE_TO_HOST) then
->>>>>>> 72e85df43ec39268e1b48fb635ff32ccb0af967a
                     next_state <= report_error;
                 else
                     next_state <= dma_write_chk_activate;
@@ -402,11 +390,7 @@ begin
             when dma_read_data_fis  =>
                 if (data_from_link(7 downto 0)= DATA_FIS) then
                     next_state <= dma_read_data_frame;
-<<<<<<< HEAD
                 elsif ((data_from_link (7 downto 0) = REG_DEVICE_TO_HOST and (data_from_link(STATUS_ERR) = '1' or data_from_link(STATUS_DF) = '1')) or link_error = '1') then --this condition is possible if address is out of range, or there is a device fault or media error
-=======
-                elsif (link_fis_type = REG_DEVICE_TO_HOST or link_error = '1') then --this condition is possible if address is out of range, or there is a device fault or media error
->>>>>>> 72e85df43ec39268e1b48fb635ff32ccb0af967a
                     next_state <= report_error;
                 else
                     next_state <= dma_read_data_fis;
@@ -453,11 +437,8 @@ begin
             last_read_address <= (others => (others => '1'));
             error_address <= (others => '1');
             command_error <= '0';
-<<<<<<< HEAD
             read_error <= '0';
             write_error <= '0';
-=======
->>>>>>> 72e85df43ec39268e1b48fb635ff32ccb0af967a
         elsif (rising_edge(clk)) then
             if (pause = '0') then
                 case (current_state) is
@@ -590,11 +571,7 @@ begin
                         tx_to_link_request <= '0';
                         rx_from_link_ready <= '1';
                         s_data_to_link <= x"F0F0F0F0";
-<<<<<<< HEAD
                         if ((data_from_link (7 downto 0) = REG_DEVICE_TO_HOST and (data_from_link(STATUS_ERR) = '1' or data_from_link(STATUS_DF) = '1')) or link_error = '1') then
-=======
-                        if (link_fis_type = REG_DEVICE_TO_HOST or link_error = '1') then
->>>>>>> 72e85df43ec39268e1b48fb635ff32ccb0af967a
                             error_address <= tx_fis_array(tx_index).lba_ext(7 downto 0) & tx_fis_array(tx_index).lba;
                             write_error <= '1';
                         end if;
@@ -664,11 +641,7 @@ begin
                     when dma_read_data_fis  =>
                         tx_to_link_request <= '0';
                         rx_from_link_ready <= '1';
-<<<<<<< HEAD
                         if ((data_from_link (7 downto 0) = REG_DEVICE_TO_HOST and (data_from_link(STATUS_ERR) = '1' or data_from_link(STATUS_DF) = '1')) or link_error = '1') then
-=======
-                        if (data_from_link (7 downto 0) = REG_DEVICE_TO_HOST or link_error = '1') then
->>>>>>> 72e85df43ec39268e1b48fb635ff32ccb0af967a
                             error_address <= rx_fis_array(rx_index).lba_ext(7 downto 0) & rx_fis_array(rx_index).lba;
                             read_error <= '1';
                         end if;
@@ -819,10 +792,7 @@ rx_buffer_control_reads : process(clk, rst_n)
             user_rx_read_valid := '0';
             rx_buffer_empty <= "11";--both buffers start empty after reset
             rx_buffer_data_valid <= '0';
-<<<<<<< HEAD
             rx_buffer_read_select <= 0;
-=======
->>>>>>> 72e85df43ec39268e1b48fb635ff32ccb0af967a
         elsif (rising_edge(clk)) then
             if (rx_write_ptr > 0) then
                 if (rx0_locked = '1') then
