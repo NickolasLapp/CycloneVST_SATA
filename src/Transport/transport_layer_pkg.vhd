@@ -5,7 +5,7 @@ use ieee.numeric_std.all;       --! Use numeric standard
 package transport_layer_pkg is
 
 	constant DATA_WIDTH : integer := 32;
-	constant BUFFER_DEPTH : integer := 128; --Using 16 dword buffers for simulation, 128 for minimum data sector size hardware test, final will be 2048
+	constant BUFFER_DEPTH : integer := 2048; --Using 16 dword buffers for simulation, 128 for minimum data sector size hardware test, final will be 2048
 	--constant WRITE_SECTOR_COUNT : std_logic_vector(15 downto 0) := x"0010";
 	constant DWORDS_PER_SECTOR : integer := 128;
 	constant WRITE_SECTOR_COUNT : std_logic_vector := std_logic_vector(to_unsigned(BUFFER_DEPTH/DWORDS_PER_SECTOR,16));
@@ -13,7 +13,7 @@ package transport_layer_pkg is
 	--States for Transport FSM
 	  type State_Type is (
 
-	                    transport_reset, transport_idle,
+	                    transport_reset, transport_idle, report_error,
 						--================================================
 	                    --Init States
 	                    transport_init_start, transport_init_end, identify_device_0,
@@ -27,7 +27,7 @@ package transport_layer_pkg is
 	                     dma_write_reg_fis_3,dma_write_reg_fis_4,
 	                     dma_write_chk_activate, dma_write_data_idle,
 	                     dma_write_data_fis, dma_write_data_frame,
-	                     dma_write_chk_status, pause_data_tx,
+	                     dma_write_chk_status,
 	                    --================================================
 
 	                    --================================================

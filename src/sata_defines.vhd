@@ -52,15 +52,15 @@ package sata_defines is
         -- trans_status_in
     constant c_l_pause_transmit     : integer := 7;                     -- Asserted when Transport Layer is not ready to transmit
     constant c_l_fifo_ready         : integer := 6;                     -- Asserted when Transport Layer FIFO has room for more data
-    constant c_l_transmit_request   : integer := 5;                     -- Asserted when Transport Layer wants to begin a transmission
-    constant c_l_data_done          : integer := 4;                     -- Asserted the clock cycle after the last of the Transport Layer data has been transmitted
+    constant c_l_transmit_request   : integer := 5;                     -- Asserted when Transport Layer wants to transmit a FIS
     constant c_l_escape             : integer := 3;                     -- Asserted when the Transport Layer wants to terminate a transmission
     constant c_l_bad_fis            : integer := 2;                     -- Asserted at the end of a "read" when a bad FIS is received by the Transport Layer
     constant c_l_error              : integer := 1;                     -- Asserted at the end of a "read" when there is a different error in the FIS received by the Transport Layer
     constant c_l_good_fis           : integer := 0;                     -- Asserted at the end of a "read" when a good FIS is received by the Transport Layer
         -- trans_status_out
     constant c_l_rcv_data_valid     : integer := 7;                     -- Asserted when the receive data being sent to the Transport Layer is valid
-    constant c_l_link_idle          : integer := 5;                     -- Asserted when the Link Layer is in the Idle state and is ready for a transmit request
+    constant c_l_phy_paused         : integer := 6;                     -- Asserted when the Physical Layer is pausing the transmission (generally for ALIGNp)
+    constant c_l_link_ready         : integer := 5;                     -- Asserted when the Link Layer is in the Idle state and is ready for a transmit request
     constant c_l_transmit_bad       : integer := 4;                     -- Asserted at the end of transmission to indicate in error
     constant c_l_transmit_good      : integer := 3;                     -- Asserted at the end of transmission to successful transmission
     constant c_l_crc_good           : integer := 2;                     -- Asserted when the CRC has been verified
@@ -76,34 +76,38 @@ package sata_defines is
     constant c_l_clear_status       : integer := 0;                     -- Asserted to indicate to the Physical Layer to clear its status vector
 
     -- constants
-    constant CHARS_PER_WORD           : integer     := 40;
+--    constant SPEED_MULTIPLIER         : integer     := 1; -- 1.5Gbps
+--    constant SPEED_MULTIPLIER         : integer     := 2; -- 3.0Gbps
+    constant SPEED_MULTIPLIER         : integer     := 4; --6.0 Gbps
+
+    constant CHARS_PER_WORD           : integer     := 40/SPEED_MULTIPLIER;
 
     constant TRANSMIT_PULSE_CHARS     : integer     := 160;
 --    constant TRANSMIT_PULSE_COUNT     : integer     := TRANSMIT_PULSE_CHARS / CHARS_PER_WORD;
     constant TRANSMIT_PULSE_COUNT     : integer     := TRANSMIT_PULSE_CHARS / CHARS_PER_WORD - 1; -- Add minus 1 because counting from 0... probably not the best way to do this.
-    constant MIN_DETECT_PULSE_COUNT   : integer    := TRANSMIT_PULSE_COUNT - 2;
-    constant MAX_DETECT_PULSE_COUNT   : integer    := TRANSMIT_PULSE_COUNT + 2;
+    constant MIN_DETECT_PULSE_COUNT   : integer     := TRANSMIT_PULSE_COUNT - 2*SPEED_MULTIPLIER;
+    constant MAX_DETECT_PULSE_COUNT   : integer     := TRANSMIT_PULSE_COUNT + 2*SPEED_MULTIPLIER;
 
 
     constant COMRESET_PAUSE_CHARS     : integer     := 480;
 --    constant COMRESET_PAUSE_COUNT     : integer     := COMRESET_PAUSE_CHARS / CHARS_PER_WORD;
     constant COMRESET_PAUSE_COUNT     : integer     := COMRESET_PAUSE_CHARS / CHARS_PER_WORD - 1; -- Add minus 1 because counting from 0... probably not the best way to do this.
-    constant MIN_COMRESET_DETECT_PAUSE_COUNT    : integer    := COMRESET_PAUSE_COUNT - 2;
-    constant MAX_COMRESET_DETECT_PAUSE_COUNT    : integer    := COMRESET_PAUSE_COUNT + 2;
+    constant MIN_COMRESET_DETECT_PAUSE_COUNT    : integer    := COMRESET_PAUSE_COUNT - 2*SPEED_MULTIPLIER;
+    constant MAX_COMRESET_DETECT_PAUSE_COUNT    : integer    := COMRESET_PAUSE_COUNT + 2*SPEED_MULTIPLIER;
 
 
     constant COMINIT_PAUSE_CHARS     : integer     := 480;
 --    constant COMINIT_PAUSE_COUNT      : integer     := COMINIT_PAUSE_CHARS / CHARS_PER_WORD;
     constant COMINIT_PAUSE_COUNT      : integer     := COMINIT_PAUSE_CHARS / CHARS_PER_WORD - 1; -- Add minus 1 because couniclitng from 0... probably not the best way to do this.
-    constant MIN_COMINIT_DETECT_PAUSE_COUNT : integer    := COMINIT_PAUSE_COUNT - 2;
-    constant MAX_COMINIT_DETECT_PAUSE_COUNT : integer    := COMINIT_PAUSE_COUNT + 2;
+    constant MIN_COMINIT_DETECT_PAUSE_COUNT : integer    := COMINIT_PAUSE_COUNT - 2*SPEED_MULTIPLIER;
+    constant MAX_COMINIT_DETECT_PAUSE_COUNT : integer    := COMINIT_PAUSE_COUNT + 2*SPEED_MULTIPLIER;
 
 
     constant COMWAKE_PAUSE_CHARS      : integer     := 160;
 --    constant COMWAKE_PAUSE_COUNT      : integer     := COMWAKE_PAUSE_CHARS / CHARS_PER_WORD;
     constant COMWAKE_PAUSE_COUNT      : integer     := COMWAKE_PAUSE_CHARS / CHARS_PER_WORD - 1; -- Add minus 1 because counting from 0... probably not the best way to do this.
-    constant MIN_COMWAKE_DETECT_PAUSE_COUNT : integer    := COMWAKE_PAUSE_COUNT - 2;
-    constant MAX_COMWAKE_DETECT_PAUSE_COUNT : integer    := COMWAKE_PAUSE_COUNT + 2;
+    constant MIN_COMWAKE_DETECT_PAUSE_COUNT : integer    := COMWAKE_PAUSE_COUNT - 2*SPEED_MULTIPLIER;
+    constant MAX_COMWAKE_DETECT_PAUSE_COUNT : integer    := COMWAKE_PAUSE_COUNT + 2*SPEED_MULTIPLIER;
 
 --    constant NUM_PAUSES_TO_SEND       : integer     := 6;
 --    constant NUM_PULSES_TO_SEND       : integer     := 6;

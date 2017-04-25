@@ -51,6 +51,7 @@ architecture top_arch of top is
     -- top level signals
     signal clk25            : std_logic;
     signal clk50            : std_logic;
+    signal si_reset            : std_logic;
     signal reset            : std_logic;
     signal cold_reset_n     : std_logic;
 
@@ -120,10 +121,11 @@ architecture top_arch of top is
 
     --signal declarations for dummy application process
     signal user_cmd_to_trans : std_logic_vector(2 downto 0);
+    signal clear_errors : std_logic;
     signal user_data_to_trans : std_logic_vector(DATA_WIDTH - 1 downto 0);
     signal user_address_to_trans : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
-    signal trans_status_to_user : std_logic_vector(3 downto 0);
+    signal trans_status_to_user : std_logic_vector(5 downto 0);
     signal trans_data_to_user : std_logic_vector(DATA_WIDTH - 1 downto 0);
     signal trans_address_to_user : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
@@ -195,7 +197,8 @@ architecture top_arch of top is
             address_from_user   :   in std_logic_vector(DATA_WIDTH - 1 downto 0);
 
             user_command            :   in std_logic_vector(2 downto 0);
-            status_to_user          :   out std_logic_vector(3 downto 0);
+            clear_errors            :   in std_logic;
+            status_to_user          :   out std_logic_vector(5 downto 0);
 
             data_to_user       :   out std_logic_vector(DATA_WIDTH - 1 downto 0);
             address_to_user    :   out std_logic_vector(DATA_WIDTH - 1 downto 0);
@@ -426,6 +429,7 @@ architecture top_arch of top is
             address_from_user => user_address_to_trans,
 
             user_command => user_cmd_to_trans,
+            clear_errors => clear_errors,
             status_to_user => trans_status_to_user,
 
             data_to_user => trans_data_to_user,
@@ -542,7 +546,7 @@ architecture top_arch of top is
         port map (
             reconfig_busy             => reconfig_busy,
             mgmt_clk_clk              => clk25,
-            mgmt_rst_reset            => reset,
+            mgmt_rst_reset            => si_reset,
             reconfig_mgmt_address     => (others => '0'),
             reconfig_mgmt_read        => '0',
             --reconfig_mgmt_readdata
@@ -576,7 +580,7 @@ architecture top_arch of top is
     xcvr_reset1 : xcvr_reset
         port map (
             clock              => clk50,
-            reset              => reset,
+            reset              => si_reset,
             pll_powerdown      => pll_powerdown,
             tx_analogreset     => tx_analogreset,
             tx_digitalreset    => tx_digitalreset,
@@ -613,7 +617,8 @@ architecture top_arch of top is
     i_switch_debounce_1 : Debounce
         port map(clk50, USER_SW_1, switch_1);
 
-    reset <= not switch_0;
+    si_reset <= not switch_0;
+    reset <= si_reset or not pll_locked;
     rst_n <= not reset;
 
     LED0_N_PL <= '0' when switch_0 = '1' else 'Z';
@@ -628,7 +633,7 @@ architecture top_arch of top is
         )
         port map(
             clk             => clk50,
-            reset           => reset,
+            reset           => si_reset,
 
             done            => i2c_done,
             error           => i2c_error,
@@ -724,7 +729,9 @@ architecture top_arch of top is
                     end if;
 
                     if(user_cmd_to_trans_prev = "100" and app_receive_read_valid_prev = '1') then
-                        app_data_counter <= app_data_counter + 1;
+                        if(app_data_counter < BUFFER_DEPTH)then
+                            app_data_counter <= app_data_counter + 1;
+                        end if;
                         --something <= trans_data_to_user;
                         if (app_count_up = '1') then
                             if(trans_data_to_user /= std_logic_vector(to_unsigned(app_data_counter,DATA_WIDTH))) then
@@ -768,5 +775,6 @@ architecture top_arch of top is
     app_receive_read_valid <= trans_status_to_user(3);
 
     test_write_address <= (others  => '0'); --remove this to allow address functionaity
+    clear_errors <= '1';
 
 end top_arch;

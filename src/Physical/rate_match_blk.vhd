@@ -164,7 +164,7 @@ begin
 
     -- this buffer will clock tx_data_from_link to tx_data_to_phy. May insert ALIGNp primitives before transfer to tx_data if the buffer becomes too empty, or elasticity requirements are not met.
     tx_fifo : rate_match_fifo PORT MAP (
-            aclr     => '0',
+            aclr     => rst,
             data     => tx_data_from_link,
             rdclk    => txclkout,
             rdreq    => tx_readreq,
@@ -179,7 +179,7 @@ begin
 
     -- this buffer will clock rx_data_from_phy to rx_data_to_link. Should eat ALGINp primitives before storing if buffer is filling up
     rx_fifo : rate_match_fifo PORT MAP (
-            aclr     => '0',
+            aclr     => rst,
             data     => rx_data_from_phy,
             rdclk    => fabric_clk,
             rdreq    => rx_readreq,
