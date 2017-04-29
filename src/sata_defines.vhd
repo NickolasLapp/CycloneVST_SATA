@@ -77,8 +77,8 @@ package sata_defines is
 
     -- constants
 --    constant SPEED_MULTIPLIER         : integer     := 1; -- 1.5Gbps
---    constant SPEED_MULTIPLIER         : integer     := 2; -- 3.0Gbps
-    constant SPEED_MULTIPLIER         : integer     := 4; --6.0 Gbps
+    constant SPEED_MULTIPLIER         : integer     := 2; -- 3.0Gbps
+--    constant SPEED_MULTIPLIER         : integer     := 4; --6.0 Gbps
 
     constant CHARS_PER_WORD           : integer     := 40/SPEED_MULTIPLIER;
 

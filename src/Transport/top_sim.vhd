@@ -349,5 +349,6 @@ architecture top_sim_arch of top_sim is
     app_receive_read_valid <= trans_status_to_user(3);
 
     test_write_address <= (others  => '0'); --remove this to allow address functionaity
+    clear_errors <= '1';
 
 end top_sim_arch;

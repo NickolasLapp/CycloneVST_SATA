@@ -618,11 +618,11 @@ architecture top_arch of top is
         port map(clk50, USER_SW_1, switch_1);
 
     si_reset <= not switch_0;
-    reset <= si_reset or not pll_locked;
+    reset <= si_reset; --or not pll_locked;
     rst_n <= not reset;
 
     LED0_N_PL <= '0' when switch_0 = '1' else 'Z';
-    LED1_N_PL <= '0' when switch_1 = '1' else 'Z';
+    LED1_N_PL <= '0' when switch_1 = '1' or (error_counter = 1000000 and words_read = 1000000) else 'Z';
 
     --Instantiate I2C component
     i_si5338_1 : si5338

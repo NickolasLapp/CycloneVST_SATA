@@ -325,7 +325,7 @@ begin
                 if (link_fis_type = DMA_ACTIVATE_FIS) then
                     next_state <= dma_write_data_fis;
                 elsif ((data_from_link (7 downto 0) = REG_DEVICE_TO_HOST and (data_from_link(STATUS_ERR) = '1' or data_from_link(STATUS_DF) = '1')) or link_error = '1') then
-                    next_state <= report_error;
+                    next_state <= wait_for_fis_end;
                 else
                     next_state <= dma_write_chk_activate;
                 end if;
@@ -345,11 +345,7 @@ begin
                 if (link_error = '1') then
                     next_state <= report_error;
                 elsif (link_fis_type = REG_DEVICE_TO_HOST) then
-                    if (data_from_link(STATUS_ERR) = '1' or data_from_link(STATUS_DF) = '1') then
-                        next_state <= report_error;
-                    else
-                        next_state <= wait_for_fis_end;
-                    end if;
+                    next_state <= wait_for_fis_end;
                 else
                     next_state <= dma_write_chk_status;
                 end if;
@@ -391,7 +387,7 @@ begin
                 if (data_from_link(7 downto 0)= DATA_FIS) then
                     next_state <= dma_read_data_frame;
                 elsif ((data_from_link (7 downto 0) = REG_DEVICE_TO_HOST and (data_from_link(STATUS_ERR) = '1' or data_from_link(STATUS_DF) = '1')) or link_error = '1') then --this condition is possible if address is out of range, or there is a device fault or media error
-                    next_state <= report_error;
+                    next_state <= wait_for_fis_end;
                 else
                     next_state <= dma_read_data_fis;
                 end if;
@@ -648,14 +644,17 @@ begin
                     when dma_read_data_frame    =>
                         if (pause = '0') then
                             if (data_from_link_valid = '1') then
-                                rx_wren(rx_index) <= '1';
+                                if (rx_write_ptr < BUFFER_DEPTH) then
+                                    rx_wren(rx_index) <= '1';
+                                else
+                                    rx_wren(rx_index) <= '0';
+                                end if;
                                 rx_write_addr(rx_index) <= std_logic_vector(to_unsigned(rx_write_ptr,DATA_WIDTH));
                                 rx_buf_data_in(rx_index) <= data_from_link;
-                                if (rx_write_ptr < BUFFER_DEPTH - 1) then
+                                if (rx_write_ptr < BUFFER_DEPTH - 1) then --changed from buffer_depth - 1
                                     rx_write_ptr <= rx_write_ptr + 1;
                                 else
                                     rx_buffer_full(rx_index) <= '1';
-                                    rx_wren(rx_index) <= '0';
                                     if (rx_index = 0) then
                                         rx0_locked <= '0';
                                     else
@@ -665,6 +664,7 @@ begin
                             end if;
                         end if;
                     when dma_read_chk_status =>
+                        rx_wren(rx_index) <= '0';
                         last_read_address(rx_index) <= rx_fis_array(rx_index).lba_ext(7 downto 0) & rx_fis_array(rx_index).lba;
                         rx_from_link_ready <= '1';
                         if (link_error = '1') then
@@ -784,11 +784,9 @@ end process;
 
 rx_buffer_control_reads : process(clk, rst_n)
     variable user_rx_read_valid : std_logic;
-    variable rx_rd_ptr_var : integer range 0 to BUFFER_DEPTH := 0;
       begin
         if (rst_n = '0') then
             rx_read_ptr <= 0;
-            rx_rd_ptr_var := 0;
             user_rx_read_valid := '0';
             rx_buffer_empty <= "11";--both buffers start empty after reset
             rx_buffer_data_valid <= '0';
@@ -813,15 +811,17 @@ rx_buffer_control_reads : process(clk, rst_n)
             end if;
 
             if (user_command(2) = '1' and user_rx_read_valid = '1') then
+                rx_read_ptr <= rx_read_ptr + 1;
+                
                 if (rx_read_ptr < BUFFER_DEPTH) then
-                    rx_read_ptr <= rx_read_ptr + 1;
-                    rx_rd_ptr_var := rx_rd_ptr_var + 1;
                     rx_buffer_data_valid <= '1';
                 else
-                    rx_read_ptr <= 0;
-                    rx_rd_ptr_var := 0;
-                    rx_buffer_empty(rx_buffer_read_select) <= '1';
                     rx_buffer_data_valid <= '0';
+                end if;
+
+                if (rx_read_ptr >= BUFFER_DEPTH - 1) then
+                    rx_read_ptr <= 0;
+                    rx_buffer_empty(rx_buffer_read_select) <= '1';
                 end if;
             end if;
         end if;

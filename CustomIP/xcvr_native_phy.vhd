@@ -187,12 +187,12 @@ begin
 			data_path_select                => "standard",
 			channels                        => 1,
 			bonded_mode                     => "non_bonded",
-			data_rate                       => "6000 Mbps",
+			data_rate                       => "3000 Mbps",
 			pma_width                       => 20,
 			tx_pma_clk_div                  => 1,
 			pll_reconfig_enable             => 1,
 			pll_external_enable             => 0,
-			pll_data_rate                   => "6000 Mbps",
+			pll_data_rate                   => "3000 Mbps",
 			pll_type                        => "CMU",
 			pma_bonding_mode                => "x1",
 			plls                            => 1,
@@ -343,21 +343,21 @@ begin
 			rx_std_byterev_ena             => "0"                                                                                 --            (terminated)
 		);
 
-	rx_errdetect <= xcvr_native_phy_inst_rx_parallel_data(57 downto 57) & xcvr_native_phy_inst_rx_parallel_data(41 downto 41) & xcvr_native_phy_inst_rx_parallel_data(25 downto 25) & xcvr_native_phy_inst_rx_parallel_data(9 downto 9);
-
-	unused_rx_parallel_data <= xcvr_native_phy_inst_rx_parallel_data(62 downto 62) & xcvr_native_phy_inst_rx_parallel_data(61 downto 61) & xcvr_native_phy_inst_rx_parallel_data(46 downto 46) & xcvr_native_phy_inst_rx_parallel_data(45 downto 45) & xcvr_native_phy_inst_rx_parallel_data(30 downto 30) & xcvr_native_phy_inst_rx_parallel_data(29 downto 29) & xcvr_native_phy_inst_rx_parallel_data(14 downto 14) & xcvr_native_phy_inst_rx_parallel_data(13 downto 13);
-
-	rx_syncstatus <= xcvr_native_phy_inst_rx_parallel_data(58 downto 58) & xcvr_native_phy_inst_rx_parallel_data(42 downto 42) & xcvr_native_phy_inst_rx_parallel_data(26 downto 26) & xcvr_native_phy_inst_rx_parallel_data(10 downto 10);
-
-	rx_disperr <= xcvr_native_phy_inst_rx_parallel_data(59 downto 59) & xcvr_native_phy_inst_rx_parallel_data(43 downto 43) & xcvr_native_phy_inst_rx_parallel_data(27 downto 27) & xcvr_native_phy_inst_rx_parallel_data(11 downto 11);
-
-	rx_patterndetect <= xcvr_native_phy_inst_rx_parallel_data(60 downto 60) & xcvr_native_phy_inst_rx_parallel_data(44 downto 44) & xcvr_native_phy_inst_rx_parallel_data(28 downto 28) & xcvr_native_phy_inst_rx_parallel_data(12 downto 12);
-
-	rx_runningdisp <= xcvr_native_phy_inst_rx_parallel_data(63 downto 63) & xcvr_native_phy_inst_rx_parallel_data(47 downto 47) & xcvr_native_phy_inst_rx_parallel_data(31 downto 31) & xcvr_native_phy_inst_rx_parallel_data(15 downto 15);
+	rx_datak <= xcvr_native_phy_inst_rx_parallel_data(56 downto 56) & xcvr_native_phy_inst_rx_parallel_data(40 downto 40) & xcvr_native_phy_inst_rx_parallel_data(24 downto 24) & xcvr_native_phy_inst_rx_parallel_data(8 downto 8);
 
 	rx_parallel_data <= xcvr_native_phy_inst_rx_parallel_data(55 downto 55) & xcvr_native_phy_inst_rx_parallel_data(54 downto 54) & xcvr_native_phy_inst_rx_parallel_data(53 downto 53) & xcvr_native_phy_inst_rx_parallel_data(52 downto 52) & xcvr_native_phy_inst_rx_parallel_data(51 downto 51) & xcvr_native_phy_inst_rx_parallel_data(50 downto 50) & xcvr_native_phy_inst_rx_parallel_data(49 downto 49) & xcvr_native_phy_inst_rx_parallel_data(48 downto 48) & xcvr_native_phy_inst_rx_parallel_data(39 downto 39) & xcvr_native_phy_inst_rx_parallel_data(38 downto 38) & xcvr_native_phy_inst_rx_parallel_data(37 downto 37) & xcvr_native_phy_inst_rx_parallel_data(36 downto 36) & xcvr_native_phy_inst_rx_parallel_data(35 downto 35) & xcvr_native_phy_inst_rx_parallel_data(34 downto 34) & xcvr_native_phy_inst_rx_parallel_data(33 downto 33) & xcvr_native_phy_inst_rx_parallel_data(32 downto 32) & xcvr_native_phy_inst_rx_parallel_data(23 downto 23) & xcvr_native_phy_inst_rx_parallel_data(22 downto 22) & xcvr_native_phy_inst_rx_parallel_data(21 downto 21) & xcvr_native_phy_inst_rx_parallel_data(20 downto 20) & xcvr_native_phy_inst_rx_parallel_data(19 downto 19) & xcvr_native_phy_inst_rx_parallel_data(18 downto 18) & xcvr_native_phy_inst_rx_parallel_data(17 downto 17) & xcvr_native_phy_inst_rx_parallel_data(16 downto 16) & xcvr_native_phy_inst_rx_parallel_data(7 downto 7) & xcvr_native_phy_inst_rx_parallel_data(6 downto 6) & xcvr_native_phy_inst_rx_parallel_data(5 downto 5) & xcvr_native_phy_inst_rx_parallel_data(4 downto 4) & xcvr_native_phy_inst_rx_parallel_data(3 downto 3) & xcvr_native_phy_inst_rx_parallel_data(2 downto 2) & xcvr_native_phy_inst_rx_parallel_data(1 downto 1) & xcvr_native_phy_inst_rx_parallel_data(0 downto 0);
 
-	rx_datak <= xcvr_native_phy_inst_rx_parallel_data(56 downto 56) & xcvr_native_phy_inst_rx_parallel_data(40 downto 40) & xcvr_native_phy_inst_rx_parallel_data(24 downto 24) & xcvr_native_phy_inst_rx_parallel_data(8 downto 8);
+	rx_syncstatus <= xcvr_native_phy_inst_rx_parallel_data(58 downto 58) & xcvr_native_phy_inst_rx_parallel_data(42 downto 42) & xcvr_native_phy_inst_rx_parallel_data(26 downto 26) & xcvr_native_phy_inst_rx_parallel_data(10 downto 10);
+
+	rx_errdetect <= xcvr_native_phy_inst_rx_parallel_data(57 downto 57) & xcvr_native_phy_inst_rx_parallel_data(41 downto 41) & xcvr_native_phy_inst_rx_parallel_data(25 downto 25) & xcvr_native_phy_inst_rx_parallel_data(9 downto 9);
+
+	rx_patterndetect <= xcvr_native_phy_inst_rx_parallel_data(60 downto 60) & xcvr_native_phy_inst_rx_parallel_data(44 downto 44) & xcvr_native_phy_inst_rx_parallel_data(28 downto 28) & xcvr_native_phy_inst_rx_parallel_data(12 downto 12);
+
+	rx_disperr <= xcvr_native_phy_inst_rx_parallel_data(59 downto 59) & xcvr_native_phy_inst_rx_parallel_data(43 downto 43) & xcvr_native_phy_inst_rx_parallel_data(27 downto 27) & xcvr_native_phy_inst_rx_parallel_data(11 downto 11);
+
+	unused_rx_parallel_data <= xcvr_native_phy_inst_rx_parallel_data(62 downto 62) & xcvr_native_phy_inst_rx_parallel_data(61 downto 61) & xcvr_native_phy_inst_rx_parallel_data(46 downto 46) & xcvr_native_phy_inst_rx_parallel_data(45 downto 45) & xcvr_native_phy_inst_rx_parallel_data(30 downto 30) & xcvr_native_phy_inst_rx_parallel_data(29 downto 29) & xcvr_native_phy_inst_rx_parallel_data(14 downto 14) & xcvr_native_phy_inst_rx_parallel_data(13 downto 13);
+
+	rx_runningdisp <= xcvr_native_phy_inst_rx_parallel_data(63 downto 63) & xcvr_native_phy_inst_rx_parallel_data(47 downto 47) & xcvr_native_phy_inst_rx_parallel_data(31 downto 31) & xcvr_native_phy_inst_rx_parallel_data(15 downto 15);
 
 end architecture rtl; -- of xcvr_native_phy
 -- Retrieval info: <?xml version="1.0"?>
@@ -398,7 +398,7 @@ end architecture rtl; -- of xcvr_native_phy
 -- Retrieval info: 	<generic name="channels" value="1" />
 -- Retrieval info: 	<generic name="bonded_mode" value="non_bonded" />
 -- Retrieval info: 	<generic name="enable_simple_interface" value="1" />
--- Retrieval info: 	<generic name="set_data_rate" value="6000" />
+-- Retrieval info: 	<generic name="set_data_rate" value="3000" />
 -- Retrieval info: 	<generic name="pma_direct_width" value="80" />
 -- Retrieval info: 	<generic name="tx_pma_clk_div" value="1" />
 -- Retrieval info: 	<generic name="pll_reconfig_enable" value="1" />
