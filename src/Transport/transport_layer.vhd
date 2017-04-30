@@ -5,7 +5,7 @@ use ieee.numeric_std.all;       --! Use numeric standard
 use work.sata_defines.all;
 use work.transport_layer_pkg.all;
 ----------------------------------------------------------------------------
---Status Truth Table:
+--Status to user Truth Table:
 -- XXX0 == Device Not Ready
 -- XXX1 == Device Ready
 -- XX01 == Write Not Ready
@@ -14,7 +14,8 @@ use work.transport_layer_pkg.all;
 -- X1X1 == Send Ready Ready
 -- 0XX1 == Retrieve Read Not Ready
 -- 1XX1 == Retrieve Read Ready
---
+-- 1XXXX == Write Error
+-- 1XXXXX == Write Error
 
 --Command truth table
 -- 000 == Do Nothing
@@ -35,8 +36,6 @@ entity transport_layer is
         clear_errors            :   in std_logic;
         status_to_user          :   out std_logic_vector(5 downto 0);
 
-
-
         data_to_user       :   out std_logic_vector(DATA_WIDTH - 1 downto 0);
         address_to_user    :   out std_logic_vector(DATA_WIDTH - 1 downto 0);
 
@@ -49,37 +48,14 @@ entity transport_layer is
 end transport_layer;
 
 architecture transport_layer_arch of transport_layer is
---States for Transport FSM
 
-  signal current_state, next_state : State_Type;
+    signal current_state, next_state : State_Type;
 
     --======================================================================================
-    --Signals to create Register Host to Device FIS contents
-    signal fis_type : std_logic_vector(7 downto 0);
-
-    --Shadow Registers... Somewhat customized for ease of use
-    signal feature : std_logic_vector(15 downto 0); -- a reserved field in DMA read ext, DMA write ext. Set to all zeros
-    signal lba : std_logic_vector(47 downto 0);   --address to write to / read from
-    signal control : std_logic_vector(7 downto 0);  --Field not defined for DMA read/write ext. Thus is "reserved", set to zeros
-    signal command : std_logic_vector(7 downto 0);  --35h for dma write ext, 25h dma read ext
-    signal c_bit       : std_logic;                 --Set to one when register transfer is due to update of command reg.
-    signal count : std_logic_vector(15 downto 0);   --# of logical sectors to be transferred for DMA. 0000h indicates 65.536 sectors --not currently using
-    --------------------------------------------------
-    --  set bit 6 to 1, bit 4 is Transport Dependent, think it should be zero
-    --Bits 7, 5 are obsolete? Currently planning on setting to zero
-    signal device: std_logic_vector(7 downto 0);
-    --------------------------------------------------
-    signal i_bit        : std_logic;                    --used only for device to host
-    signal status       : std_logic_vector(7 downto 0); --used only for device to host
-    signal error        : std_logic_vector(7 downto 0); --used only for device to host
-    --======================================================================================
-
+    signal lba, read_lba : std_logic_vector(47 downto 0);   --address to write to / read from
     signal error_address : std_logic_vector(DATA_WIDTH - 1 downto 0);
-
     signal last_read_address : data_width_array_type;
-
     signal command_error, read_error, write_error : std_logic;
-
     signal tx_fis_array, rx_fis_array   :   register_fis_array_type; -- signals to hold host to device register FIS contents
 
     signal transport_ready : std_logic;
@@ -90,13 +66,10 @@ architecture transport_layer_arch of transport_layer is
     --to link interface status signals
     signal tx_to_link_request : std_logic;
     signal rx_from_link_ready : std_logic;
-
     signal paused_data_to_link : std_logic_vector(DATA_WIDTH - 1 downto 0);
-
     signal link_fis_type : std_logic_vector(7 downto 0);
 
-
-
+    --constants to index into status to user vector
     constant DEVICE_READY_INDEX         : integer := 0;
     constant WRITE_VALID_INDEX          : integer := 1;
     constant SEND_READ_VALID_INDEX      : integer := 2;
@@ -106,19 +79,6 @@ architecture transport_layer_arch of transport_layer is
 
     constant STATUS_ERR : integer := 16;--index of error bit in first word of register device to host FIS
     constant STATUS_DF : integer := 21; --index of device fault bit in first word of register device to host FIS
-    --constant STATUS_BSY : integer := 0; --not checking busy bit, testing indicates it is uncessary
-
-component buffer_2prt_ram is
-    port
-    (
-        clock       : in std_logic  := '1';
-        data        : in std_logic_vector (31 downto 0);
-        rdaddress       : in std_logic_vector (10 downto 0);
-        wraddress       : in std_logic_vector (10 downto 0);
-        wren        : in std_logic  := '0';
-        q       : out std_logic_vector (31 downto 0)
-    );
-end component buffer_2prt_ram;
 
     --======================================================================================
     --Buffers
@@ -145,6 +105,17 @@ end component buffer_2prt_ram;
     signal tx_buffer_data_valid : std_logic;
     signal rx_buffer_data_valid : std_logic;
     --======================================================================================
+component buffer_2prt_ram is
+    port
+    (
+        clock       : in std_logic  := '1';
+        data        : in std_logic_vector (31 downto 0);
+        rdaddress       : in std_logic_vector (10 downto 0);
+        wraddress       : in std_logic_vector (10 downto 0);
+        wren        : in std_logic  := '0';
+        q       : out std_logic_vector (31 downto 0)
+    );
+end component buffer_2prt_ram;
 
 begin
     tx_buffer_0 : buffer_2prt_ram
@@ -435,6 +406,7 @@ begin
             command_error <= '0';
             read_error <= '0';
             write_error <= '0';
+            read_lba <= (others => '0');
         elsif (rising_edge(clk)) then
             if (pause = '0') then
                 case (current_state) is
@@ -464,6 +436,7 @@ begin
                         command_error <= '0';
                         read_error <= '0';
                         write_error <= '0';
+                        read_lba <= (others => '0');
                     when transport_init_start =>
                         rx_from_link_ready <= '1';
                         tx_fis_array(tx_index).fis_type <= REG_HOST_TO_DEVICE;
@@ -526,6 +499,7 @@ begin
                             if (rx_buffer_empty(0) = '1') then
                                 rx_index <= 0;
                                 rx0_locked <= '1';
+                                read_lba <= x"0000" & address_from_user;
                             elsif (rx_buffer_empty(1) = '1') then
                                 rx_index <= 1;
                                 rx1_locked <= '1';
@@ -612,10 +586,10 @@ begin
                         rx_fis_array(rx_index).crrr_pm <= x"80";
                         rx_fis_array(rx_index).command <= READ_DMA_EXT;
                         rx_fis_array(rx_index).features <= x"00";
-                        rx_fis_array(rx_index).lba <= lba(23 downto 0);
+                        rx_fis_array(rx_index).lba <= read_lba(23 downto 0);
                         rx_fis_array(rx_index).device <= x"E0";
                         rx_fis_array(rx_index).features_ext <= x"00";
-                        rx_fis_array(rx_index).lba_ext <= lba(47 downto 24);
+                        rx_fis_array(rx_index).lba_ext <= read_lba(47 downto 24);
                         rx_fis_array(rx_index).count <= WRITE_SECTOR_COUNT; --on most drives 1 logical sector := 512 bytes
                         rx_fis_array(rx_index).icc <= x"00";
                         rx_fis_array(rx_index).control <= x"00";
@@ -812,7 +786,7 @@ rx_buffer_control_reads : process(clk, rst_n)
 
             if (user_command(2) = '1' and user_rx_read_valid = '1') then
                 rx_read_ptr <= rx_read_ptr + 1;
-                
+
                 if (rx_read_ptr < BUFFER_DEPTH) then
                     rx_buffer_data_valid <= '1';
                 else
@@ -870,7 +844,7 @@ rx_buffer_control_reads : process(clk, rst_n)
 
     update_status : process(current_state, tx_buffer_full, rx_buffer_full, rx_buffer_empty, tx_buffer_empty, rx0_locked, rx1_locked,tx0_locked,tx1_locked)
       begin
-        if (((tx_buffer_full(0) = '0' and tx0_locked = '0') or (tx_buffer_full(1) = '0' and tx1_locked = '0')) and current_state = transport_idle) then
+        if (((tx_buffer_full(0) = '0' and tx0_locked = '0') or (tx_buffer_full(1) = '0' and tx1_locked = '0'))) then
             status_to_user(WRITE_VALID_INDEX) <= '1';
         else
             status_to_user(WRITE_VALID_INDEX) <= '0';
