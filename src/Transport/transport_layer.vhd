@@ -852,7 +852,7 @@ rx_buffer_control_reads : process(clk, rst_n)
     --============================================================================
 
     --============================================================================
-    user_addr_proc : process(read_error, write_error, error_address, last_read_address)
+    user_addr_proc : process(read_error, write_error, error_address, last_read_address,rx_buffer_read_select)
       --this processes switches the address to the user
       begin
         if (read_error = '1' or write_error = '1') then
