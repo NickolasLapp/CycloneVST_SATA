@@ -94,7 +94,7 @@ architecture phy_layer_init_arch of phy_layer_init is
       port(
         rxclkout         : in  std_logic;
         txclkout         : in  std_logic;
-        reset            : in  std_logic;
+        rst_n            : in  std_logic;
 
         rx_data          : in  std_logic_vector(31 downto 0);
         rx_signaldetect  : in  std_logic;

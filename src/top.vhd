@@ -58,7 +58,7 @@ architecture top_arch of top is
     signal switch_0 : std_logic;
     signal switch_1 : std_logic;
 
-    signal fabric_clk_37_5  : std_logic; -- use this to clock the receive datapath
+    signal fabric_clk  : std_logic; -- use this to clock the receive datapath
     -- xcvr signals
     --PHY Control Signals
     signal rxclkout                : std_logic; -- use this to clock the receive datapath
@@ -232,7 +232,7 @@ architecture top_arch of top is
 
     component phy_layer_32bit is
         port(
-            fabric_clk_37_5 : in std_logic;
+            fabric_clk : in std_logic;
             rst_n           : in std_logic;
 
             --Interface with link layer
@@ -452,7 +452,6 @@ architecture top_arch of top is
             --Interface with transceivers
             rxclkout         => rxclkout,
             txclkout         => txclkout,
-            rx_pma_clkout    => rx_pma_clkout,
 
             rx_data          => rx_data,
             rx_datak         => rx_datak,
@@ -558,7 +557,7 @@ architecture top_arch of top is
         port map(
             refclk   => clk25,
             rst      => '0',
-            outclk_0 => fabric_clk_37_5
+            outclk_0 => fabric_clk
 --            locked   : out std_logic         --  locked.export
         );
 

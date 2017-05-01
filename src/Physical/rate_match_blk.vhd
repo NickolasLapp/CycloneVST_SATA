@@ -43,6 +43,8 @@ architecture rate_match_blk_arch of rate_match_blk is
     signal rx_data_to_link_s : std_logic_vector(63 downto 0);
     signal tx_data_to_phy_s  : std_logic_vector(63 downto 0);
 
+    signal rst : std_logic;
+
     component rate_match_fifo
         port
         (
@@ -158,9 +160,11 @@ begin
         end if;
     end process;
 
+
+    rst <= not rst_n;
     -- this buffer will clock tx_data_from_link to tx_data_to_phy. May insert ALIGNp primitives before transfer to tx_data if the buffer becomes too empty, or elasticity requirements are not met.
     tx_fifo : rate_match_fifo PORT MAP (
-            aclr     => not rst_n,
+            aclr     => rst,
             data     => tx_data_from_link,
             rdclk    => txclkout,
             rdreq    => tx_readreq,
@@ -168,12 +172,12 @@ begin
             wrreq    => tx_writereq,
             q        => tx_data_to_phy_s,
             rdempty  => tx_buff_empty,
-            wrfull   => tx_buff_full,
+            wrfull   => tx_buff_full
         );
 
     -- this buffer will clock rx_data_from_phy to rx_data_to_link. Should eat ALGINp primitives before storing if buffer is filling up
     rx_fifo : rate_match_fifo PORT MAP (
-            aclr     => not rst_n,
+            aclr     => rst,
             data     => rx_data_from_phy,
             rdclk    => fabric_clk,
             rdreq    => rx_readreq,
@@ -181,6 +185,6 @@ begin
             wrreq    => rx_writereq,
             q        => rx_data_to_link_s,
             rdempty  => rx_buff_empty,
-            wrfull   => rx_buff_full,
+            wrfull   => rx_buff_full
         );
 end architecture rate_match_blk_arch;
