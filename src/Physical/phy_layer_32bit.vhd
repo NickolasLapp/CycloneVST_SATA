@@ -61,7 +61,7 @@ architecture phy_layer_32bit_arch of phy_layer_32bit is
 
     signal ppm_within_threshold     : std_logic;
 
-    component PhyLayerInit is
+    component phy_layer_init is
         port(
             rxclkout         : in  std_logic;
             txclkout         : in  std_logic;
@@ -89,7 +89,7 @@ architecture phy_layer_32bit_arch of phy_layer_32bit is
             ppm_within_threshold : in std_logic;
             PHYRDY         : out std_logic
         );
-    end component PhyLayerInit;
+    end component phy_layer_init;
 
     component rate_match_blk
         port
@@ -121,7 +121,7 @@ architecture phy_layer_32bit_arch of phy_layer_32bit is
 
 begin
 
-    phyLayerInit1 : PhyLayerInit
+    phy_layer_init1 : phy_layer_init
         port map(
             rxclkout         => rxclkout,
             txclkout         => txclkout,

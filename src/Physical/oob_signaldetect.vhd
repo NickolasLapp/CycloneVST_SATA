@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 
 use work.sata_defines.all;
 
-entity OOB_SignalDetect is
+entity OOB_signal_detect is
     port(
         rxclkout         : in  std_logic;
         txclkout         : in  std_logic;
@@ -14,43 +14,43 @@ entity OOB_SignalDetect is
         rx_data : in  std_logic_vector(31 downto 0);
         rx_signaldetect  : in  std_logic;
 
-        oobSignalToSend  : in  OOB_SIGNAL;
-        oobRxIdle        : out std_logic;
-        oobTxIdle        : out std_logic;
+        oob_signal_to_send  : in  OOB_SIGNAL;
+        oob_rx_idle        : out std_logic;
+        oob_tx_idle        : out std_logic;
 
-        oobSignalReceived: out OOB_SIGNAL;
+        oob_signal_received: out OOB_SIGNAL;
 
         tx_forceelecidle : out std_logic
     );
-end entity OOB_SignalDetect;
+end entity OOB_signal_detect;
 
-architecture OOB_SignalDetect_arch of OOB_SignalDetect is
+architecture OOB_signal_detect_arch of OOB_signal_detect is
 
 
-    signal sendingSignal : OOB_SIGNAL := NONE;
-    signal receivingSignal : OOB_SIGNAL := NONE;
+    signal sending_signal : OOB_SIGNAL := NONE;
+    signal receiving_signal : OOB_SIGNAL := NONE;
 
-    signal txState : OOB_STATE_TYPE := IDLE;
-    signal txNextState : OOB_STATE_TYPE := IDLE;
+    signal tx_state : OOB_STATE_TYPE := IDLE;
+    signal tx_next_state : OOB_STATE_TYPE := IDLE;
 
     signal rx_signaldetect_prev : std_logic;
 
-    signal UICountSent : std_logic_vector(15 downto 0);
-    signal pausesSent  : std_logic_vector(7 downto 0);
-    signal pulsesSent  : std_logic_vector(7 downto 0);
+    signal UICount_sent : std_logic_vector(15 downto 0);
+    signal pauses_sent  : std_logic_vector(7 downto 0);
+    signal pulses_sent  : std_logic_vector(7 downto 0);
 
-    signal UICountRecvd : std_logic_vector(15 downto 0);
-    signal pausesRecvd  : std_logic_vector(7 downto 0);
-    signal pulsesRecvd  : std_logic_vector(7 downto 0);
+    signal UICount_recvd : std_logic_vector(15 downto 0);
+    signal pauses_recvd  : std_logic_vector(7 downto 0);
+    signal pulses_recvd  : std_logic_vector(7 downto 0);
 
 begin
     -- State Register
     process(txclkout, reset)
     begin
         if(reset = '1') then
-            txState <= IDLE;
+            tx_state <= IDLE;
         elsif(rising_edge(txclkout)) then
-            txState <= txNextState;
+            tx_state <= tx_next_state;
         end if;
     end process;
 
@@ -58,51 +58,51 @@ begin
     process(rxclkout, reset)
     begin
         if(reset = '1') then
-            UICountRecvd <= (others => '0');
-            pausesRecvd  <= (others => '0');
-            pulsesRecvd  <= (others => '0');
+            UICount_recvd <= (others => '0');
+            pauses_recvd  <= (others => '0');
+            pulses_recvd  <= (others => '0');
         elsif(rising_edge(rxclkout)) then
             rx_signaldetect_prev <= rx_signaldetect;
             if(rx_signaldetect = rx_signaldetect_prev) then
-                UICountRecvd <= UICountRecvd + 1;
+                UICount_recvd <= UICount_recvd + 1;
             else -- detect switch
-                UICountRecvd <= (others => '0');
+                UICount_recvd <= (others => '0');
                 if(rx_signaldetect = '0') then -- pulse just finished
-                    if(UICountRecvd > MIN_DETECT_PULSE_COUNT and UICountRecvd < MAX_DETECT_PULSE_COUNT) then
-                        pulsesRecvd <= pulsesRecvd + 1;
+                    if(UICount_recvd > MIN_DETECT_PULSE_COUNT and UICount_recvd < MAX_DETECT_PULSE_COUNT) then
+                        pulses_recvd <= pulses_recvd + 1;
                     else
                         -- error on number of pulses received...
-                        receivingSignal <= NONE;
-                        pulsesRecvd <= (others => '0');
-                        pausesRecvd <= (others => '0');
-                        UICountRecvd <= (others => '0');
+                        receiving_signal <= NONE;
+                        pulses_recvd <= (others => '0');
+                        pauses_recvd <= (others => '0');
+                        UICount_recvd <= (others => '0');
                     end if;
                 else -- pause just finished
-                    if(UICountRecvd > MIN_COMINIT_DETECT_PAUSE_COUNT and UICountRecvd < MAX_COMINIT_DETECT_PAUSE_COUNT) then
-                        if(receivingSignal = NONE or receivingSignal = COMINIT) then
-                            pausesRecvd <= pausesRecvd + 1;
-                            receivingSignal <= COMINIT;
+                    if(UICount_recvd > MIN_COMINIT_DETECT_PAUSE_COUNT and UICount_recvd < MAX_COMINIT_DETECT_PAUSE_COUNT) then
+                        if(receiving_signal = NONE or receiving_signal = COMINIT) then
+                            pauses_recvd <= pauses_recvd + 1;
+                            receiving_signal <= COMINIT;
                         else
-                            receivingSignal <= NONE;
-                            pulsesRecvd <= (others => '0');
-                            pausesRecvd <= (others => '0');
-                            UICountRecvd <= (others => '0');
+                            receiving_signal <= NONE;
+                            pulses_recvd <= (others => '0');
+                            pauses_recvd <= (others => '0');
+                            UICount_recvd <= (others => '0');
                         end if;
-                    elsif(UICountRecvd > MIN_COMWAKE_DETECT_PAUSE_COUNT and UICountRecvd < MAX_COMWAKE_DETECT_PAUSE_COUNT) then
-                        if(receivingSignal = NONE or receivingSignal = COMWAKE) then
-                            pausesRecvd <= pausesRecvd + 1;
-                            receivingSignal <= COMWAKE;
+                    elsif(UICount_recvd > MIN_COMWAKE_DETECT_PAUSE_COUNT and UICount_recvd < MAX_COMWAKE_DETECT_PAUSE_COUNT) then
+                        if(receiving_signal = NONE or receiving_signal = COMWAKE) then
+                            pauses_recvd <= pauses_recvd + 1;
+                            receiving_signal <= COMWAKE;
                         else
-                            receivingSignal <= NONE;
-                            pulsesRecvd <= (others => '0');
-                            pausesRecvd <= (others => '0');
-                            UICountRecvd <= (others => '0');
+                            receiving_signal <= NONE;
+                            pulses_recvd <= (others => '0');
+                            pauses_recvd <= (others => '0');
+                            UICount_recvd <= (others => '0');
                         end if;
                     else
-                        receivingSignal <= NONE;
-                        pulsesRecvd <= (others => '0');
-                        pausesRecvd <= (others => '0');
-                        UICountRecvd <= (others => '0');
+                        receiving_signal <= NONE;
+                        pulses_recvd <= (others => '0');
+                        pauses_recvd <= (others => '0');
+                        UICount_recvd <= (others => '0');
                     end if;
                 end if;
             end if;
@@ -113,38 +113,38 @@ begin
     process(txclkout, reset)
     begin
         if(reset = '1') then
-            UICountSent  <= (others => '0');
-            pausesSent   <= (others => '0');
-            pulsesSent   <= (others => '0');
+            UICount_sent  <= (others => '0');
+            pauses_sent   <= (others => '0');
+            pulses_sent   <= (others => '0');
         elsif(rising_edge(txclkout)) then
-            case txState is
+            case tx_state is
                 when IDLE       =>
-                    UICountSent <= (others => '0');
-                    pausesSent <= (others => '0');
-                    pulsesSent <= (others => '0');
-                    if(oobSignalToSend = COMWAKE or oobSignalToSend = COMRESET) then
-                        sendingSignal <= oobSignalToSend;
+                    UICount_sent <= (others => '0');
+                    pauses_sent <= (others => '0');
+                    pulses_sent <= (others => '0');
+                    if(oob_signal_to_send = COMWAKE or oob_signal_to_send = COMRESET) then
+                        sending_signal <= oob_signal_to_send;
                     end if;
                     tx_forceelecidle <= '1';
 
                 when SEND_PULSE =>
-                    if(UICountSent = TRANSMIT_PULSE_COUNT) then
-                        UICountSent <= (others =>'0');
-                        pulsesSent <= pulsesSent + 1;
+                    if(UICount_sent = TRANSMIT_PULSE_COUNT) then
+                        UICount_sent <= (others =>'0');
+                        pulses_sent <= pulses_sent + 1;
                     else
-                        UICountSent <= UICountSent + 1;
+                        UICount_sent <= UICount_sent + 1;
                     end if;
                     tx_forceelecidle <= '0';
 
                 when SEND_PAUSE =>
-                    if(UICountSent = COMWAKE_PAUSE_COUNT and sendingSignal = COMWAKE) then
-                        UICountSent <= (others => '0');
-                        pausesSent <= pausesSent + 1;
-                    elsif(UICountSent = COMRESET_PAUSE_COUNT and sendingSignal = COMRESET) then
-                        UICountSent <= (others => '0');
-                        pausesSent <= pausesSent + 1;
+                    if(UICount_sent = COMWAKE_PAUSE_COUNT and sending_signal = COMWAKE) then
+                        UICount_sent <= (others => '0');
+                        pauses_sent <= pauses_sent + 1;
+                    elsif(UICount_sent = COMRESET_PAUSE_COUNT and sending_signal = COMRESET) then
+                        UICount_sent <= (others => '0');
+                        pauses_sent <= pauses_sent + 1;
                     else
-                        UICountSent <= UICountSent + 1;
+                        UICount_sent <= UICount_sent + 1;
                     end if;
                     tx_forceelecidle <= '1';
 
@@ -157,60 +157,60 @@ begin
 
 
     -- Next State Logic
-    process(UICountSent, pausesSent, pulsesSent, oobSignalToSend, txState, sendingSignal)
+    process(UICount_sent, pauses_sent, pulses_sent, oob_signal_to_send, tx_state, sending_signal)
     begin
-        case(txState) is
+        case(tx_state) is
             when IDLE =>
-                if(oobSignalToSend = COMWAKE or oobSignalToSend = COMRESET) then
-                    txNextState <= SEND_PULSE;
+                if(oob_signal_to_send = COMWAKE or oob_signal_to_send = COMRESET) then
+                    tx_next_state <= SEND_PULSE;
                 else
-                    txNextState <= IDLE;
+                    tx_next_state <= IDLE;
                 end if;
             when SEND_PULSE =>
-                if (UICountSent = TRANSMIT_PULSE_COUNT) then
-                    txNextState <= SEND_PAUSE;
+                if (UICount_sent = TRANSMIT_PULSE_COUNT) then
+                    tx_next_state <= SEND_PAUSE;
                 else
-                    txNextState <= SEND_PULSE;
+                    tx_next_state <= SEND_PULSE;
                 end if;
 
             when SEND_PAUSE =>
-                if(sendingSignal = COMWAKE) then
-                    if(UICountSent < COMWAKE_PAUSE_COUNT) then
-                        txNextState <= SEND_PAUSE;
+                if(sending_signal = COMWAKE) then
+                    if(UICount_sent < COMWAKE_PAUSE_COUNT) then
+                        tx_next_state <= SEND_PAUSE;
                     else
-                        if(pausesSent >= NUM_PAUSES_TO_SEND and pulsesSent >= NUM_PULSES_TO_SEND) then
-                            txNextState <= IDLE;
+                        if(pauses_sent >= NUM_PAUSES_TO_SEND and pulses_sent >= NUM_PULSES_TO_SEND) then
+                            tx_next_state <= IDLE;
                         else
-                            txNextState <= SEND_PULSE;
+                            tx_next_state <= SEND_PULSE;
                         end if;
                     end if;
-                else -- sendingSignal = COMRESET
-                    if(UICountSent < COMRESET_PAUSE_COUNT) then
-                        txNextState <= SEND_PAUSE;
+                else -- sending_signal = COMRESET
+                    if(UICount_sent < COMRESET_PAUSE_COUNT) then
+                        tx_next_state <= SEND_PAUSE;
                     else
-                        if(pausesSent >= NUM_PAUSES_TO_SEND and pulsesSent >= NUM_PULSES_TO_SEND) then
-                            txNextState <= IDLE;
+                        if(pauses_sent >= NUM_PAUSES_TO_SEND and pulses_sent >= NUM_PULSES_TO_SEND) then
+                            tx_next_state <= IDLE;
                         else
-                            txNextState <= SEND_PULSE;
+                            tx_next_state <= SEND_PULSE;
                         end if;
                     end if;
                 end if;
             when others =>
-                txNextState <= IDLE;
+                tx_next_state <= IDLE;
         end case;
     end process;
 
     process(rxclkout, reset)
     begin
         if(reset = '1') then
-            oobSignalReceived <= NONE;
+            oob_signal_received <= NONE;
         elsif(rising_edge(rxclkout)) then
-            if(pausesRecvd = NUM_PAUSES_TO_SEND and receivingSignal = COMINIT) then
-                oobSignalReceived <= COMINIT;
-            elsif(pausesRecvd = NUM_PAUSES_TO_SEND and receivingSignal = COMWAKE) then
-                oobSignalReceived <= COMWAKE;
+            if(pauses_recvd = NUM_PAUSES_TO_SEND and receiving_signal = COMINIT) then
+                oob_signal_received <= COMINIT;
+            elsif(pauses_recvd = NUM_PAUSES_TO_SEND and receiving_signal = COMWAKE) then
+                oob_signal_received <= COMWAKE;
             else
-                oobSignalReceived <= NONE;
+                oob_signal_received <= NONE;
             end if;
         end if;
     end process;
@@ -221,28 +221,28 @@ begin
     process(rxclkout, reset)
     begin
         if(reset = '1') then
-            oobRxIdle <= '0';
+            oob_rx_idle <= '0';
         elsif(rising_edge(rxclkout)) then
-            if(UICountRecvd > MIN_IDLE_DETECT_COUNT) then
-                oobRxIdle <= '1';
+            if(UICount_recvd > MIN_IDLE_DETECT_COUNT) then
+                oob_rx_idle <= '1';
             else
-                oobRxIdle <= '0';
+                oob_rx_idle <= '0';
             end if;
         end if;
     end process;
 
-    -- idle when txState = IDLE, and no signal to send coming up
+    -- idle when tx_state = IDLE, and no signal to send coming up
     process(txclkout, reset)
     begin
         if(reset = '1') then
-            oobTxIdle <= '0';
+            oob_tx_idle <= '0';
         elsif(rising_edge(txclkout)) then
-            if(txState = IDLE and oobSignalToSend = NONE) then
-                oobTxIdle <= '1';
+            if(tx_state = IDLE and oob_signal_to_send = NONE) then
+                oob_tx_idle <= '1';
             else
-                oobTxIdle <= '0';
+                oob_tx_idle <= '0';
             end if;
         end if;
     end process;
 
-end architecture OOB_SignalDetect_arch;
+end architecture OOB_signal_detect_arch;
