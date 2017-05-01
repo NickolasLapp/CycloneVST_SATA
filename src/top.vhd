@@ -10,7 +10,7 @@ entity top is
     port(
 --        cpu_rst_n : in std_logic;       -- CPU_RESETn pushbutton. (Debounce this). Pin
 
-        pll_refclk_150 : in std_logic;  -- 150MHz PLL refclk for XCVR design. Pin
+        pll_refclk_300 : in std_logic;  -- 150MHz PLL refclk for XCVR design. Pin
 
         rx_serial_data : in  std_logic; -- XCVR input serial line.
         tx_serial_data : out std_logic; -- XCVR output serial line
@@ -233,7 +233,7 @@ architecture top_arch of top is
     component phy_layer_32bit is
         port(
             fabric_clk_37_5 : in std_logic;
-            reset         : in std_logic;
+            rst_n           : in std_logic;
 
             --Interface with link layer
             tx_data_from_link:   in std_logic_vector(31 downto 0);
@@ -244,7 +244,6 @@ architecture top_arch of top is
             --Interface with transceivers
             rxclkout         : in std_logic;   -- recovered rx clock to clock receive datapath from XCVRs
             txclkout         : in  std_logic;  -- tx clock from XCVRs to clock transmit datapath
-            rx_pma_clkout    : in std_logic;                      --           rx_pma_clkout.rx_pma_clkout
 
             rx_data : in  std_logic_vector(31 downto 0); --raw received data from XCVRs
             rx_datak         : in  std_logic_vector(3 downto 0); --data or control symbol for receieved data
@@ -327,22 +326,6 @@ architecture top_arch of top is
         );
     end component xcvr_reset;
 
-    --component XCVR_CustomReset
-    --    port (
-    --        clk50              : in std_logic;
-    --        master_reset       : in std_logic;
-    --        pll_powerdown      : out std_logic;
-    --        tx_digitalreset    : out std_logic;
-    --        rx_analogreset     : out std_logic;
-    --        rx_digitalreset    : out std_logic;
-    --        rx_locktorefclk    : out std_logic;
-    --        rx_locktodata      : out std_logic;
-    --        busy               : in std_logic;
-    --        pll_locked         : in std_logic;
-    --        oob_handshake_done : in std_logic
-    --    );
-    --end component;
-
     component xcvr_reconf is
         port (
             reconfig_busy             : out std_logic;                                         --      reconfig_busy.reconfig_busy
@@ -409,15 +392,6 @@ architecture top_arch of top is
 
     begin
 
-    --i_transdummy1 : transport_dummy
-    --port map(
-    --        fabric_clk => txclkout,
-    --        reset      => rst_n,
-    --        trans_status_to_link => trans_status_in,
-    --        link_status_to_trans => trans_status_out,
-    --        tx_data_to_link      => trans_tx_data_in,
-    --        rx_data_from_link    => trans_rx_data_out
-    --    );
     i_transport_layer1 : transport_layer
         port map(
 
@@ -465,8 +439,8 @@ architecture top_arch of top is
 
     i_phy_layer_1 : phy_layer_32bit
     port map(
-            fabric_clk_37_5 => txclkout,
-            reset         => reset,
+            fabric_clk    => txclkout,
+            rst_n         => rst_n,
 
             --Interface with link layer
             tx_data_from_link    => tx_data_from_link,
@@ -502,12 +476,12 @@ architecture top_arch of top is
             pll_powerdown           => pll_powerdown,
             tx_analogreset          => tx_analogreset,
             tx_digitalreset         => tx_digitalreset,
-            tx_pll_refclk           => pll_refclk_150,
+            tx_pll_refclk           => pll_refclk_300,
             tx_serial_data          => tx_serial_data,
             pll_locked              => pll_locked,
             rx_analogreset          => rx_analogreset,
             rx_digitalreset         => rx_digitalreset,
-            rx_cdr_refclk           => pll_refclk_150, -- cdr refclk is same as pll refclk!!!
+            rx_cdr_refclk           => pll_refclk_300, -- cdr refclk is same as pll refclk!!!
             rx_pma_clkout           => rx_pma_clkout,
             rx_serial_data          => rx_serial_data,
             rx_set_locktodata       => rx_set_locktodata,
@@ -560,21 +534,6 @@ architecture top_arch of top is
             reconfig_to_xcvr          => reconfig_to_xcvr,
             reconfig_from_xcvr        => reconfig_from_xcvr
         );
-
-    --customRst1 : XCVR_CustomReset
-    --    port map (
-    --        clk50              => clk50,
-    --        master_reset       => reset,
-    --        pll_powerdown      => pll_powerdown,
-    --        tx_digitalreset    => tx_digitalreset,
-    --        rx_analogreset     => rx_analogreset,
-    --        rx_digitalreset    => rx_digitalreset,
-    --        rx_locktorefclk    => rx_set_locktoref,
-    --        rx_locktodata      => rx_set_locktodata,
-    --        busy               => tx_cal_busy,
-    --        pll_locked         => pll_locked,
-    --        oob_handshake_done => oob_handshake_done
-    --    );
 
 
     xcvr_reset1 : xcvr_reset

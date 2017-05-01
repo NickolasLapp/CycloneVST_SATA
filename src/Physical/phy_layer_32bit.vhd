@@ -7,21 +7,19 @@ use work.sata_defines.all;
 
 entity phy_layer_32bit is
     port(
-        fabric_clk_37_5 : in std_logic;           -- 50 MHz clock from AC18, driven by SL18860C
-        reset         : in std_logic;       -- CPU_RESETn pushbutton. (Debounce this). Pin AD27
+        fabric_clk : in std_logic;          -- clk on fabric side, will clock this side of the rx buffers
+        rst_n         : in std_logic;
 
         --Interface with link layer
         tx_data_from_link   :   in std_logic_vector(31 downto 0);
         rx_data_to_link     :   out std_logic_vector(31 downto 0);
         phy_status_to_link  :   out std_logic_vector(PHY_STATUS_LENGTH-1 downto 0);       -- [primitive, PHYRDY/n, Dec_Err]
-        link_status_to_phy  :   in  std_logic_vector(LINK_STATUS_LENGTH-1  downto 0);       -- [primitive, clear status signals]
+        link_status_to_phy  :   in  std_logic_vector(LINK_STATUS_LENGTH-1  downto 0);     -- [primitive, clear status signals]
 --        perform_init     :   out std_logic); -- currently unused
 
         --Interface with transceivers
         rxclkout         : in std_logic;   -- recovered rx clock to clock receive datapath from XCVRs
         txclkout         : in  std_logic; -- tx clock from XCVRs to clock transmit datapath
-
-        rx_pma_clkout    : in std_logic;
 
         rx_data          : in  std_logic_vector(31 downto 0); --raw received data from XCVRs
         rx_datak         : in  std_logic_vector(3 downto 0); --data or control symbol for receieved data
@@ -43,7 +41,7 @@ END phy_layer_32bit;
 
 architecture phy_layer_32bit_arch of phy_layer_32bit is
     signal PHYRDY : std_logic;
-    signal rate_match_clear     : std_logic;
+    signal rate_match_rst_n     : std_logic;
 
     signal rx_data_from_phy_comb         : std_logic_vector(63 downto 0); -- from XCVRs, this is fed into the rate match blk
     signal rx_data_to_link_comb          : std_logic_vector(63 downto 0); -- to link layer. This is converted to status and data signals and passed to link
@@ -53,19 +51,17 @@ architecture phy_layer_32bit_arch of phy_layer_32bit is
     signal link_status_to_phy_s            : std_logic_vector(31 downto 0);
     signal phy_status_to_link_s             : std_logic_vector(31 downto 0);
 
-    signal tx_data_phy_init         : std_logic_vector(31 downto 0);
-    signal tx_datak_phy_init        : std_logic_vector(3 downto 0);
+    signal tx_data_phy_init         : std_logic_vector(31 downto 0); -- this is the data that the initializaiton layer wants to send onto the link. Should send this data out when phyrdy='0'
+    signal tx_datak_phy_init        : std_logic_vector(3 downto 0); -- this is the data that the initializaiton layer wants to send onto the link. Should send this data out when phyrdy='0'
 
-    signal rx_data_from_phy         : std_logic_vector(31 downto 0);
+    signal rx_data_from_phy         : std_logic_vector(31 downto 0);-- ordered data. only good once phyrdy=1
     signal primitive_recvd          : std_logic;
-
-    signal ppm_within_threshold     : std_logic;
 
     component phy_layer_init is
         port(
             rxclkout         : in  std_logic;
             txclkout         : in  std_logic;
-            reset            : in  std_logic;
+            rst_n            : in  std_logic;
 
             rx_ordered_data  : out std_logic_vector(31 downto 0);
             primitive_recvd  : out std_logic;
@@ -86,7 +82,6 @@ architecture phy_layer_32bit_arch of phy_layer_32bit is
             rx_set_locktoref  : out std_logic;
             rx_set_locktodata : out std_logic;
 
-            ppm_within_threshold : in std_logic;
             PHYRDY         : out std_logic
         );
     end component phy_layer_init;
@@ -100,24 +95,14 @@ architecture phy_layer_32bit_arch of phy_layer_32bit is
             -- from XCVR block
             rxclkout  : in std_logic;
             txclkout  : in std_logic;
-            rx_data_from_phy : in std_logic_vector(63 downto 0);
-            tx_data_to_phy : out std_logic_vector(63 downto 0);
+            rx_data_from_phy : in std_logic_vector(63 downto 0); -- stored as 64 bits, so we can store data next to the appropriate status. Upper 32 bits = data, lower 32 bits = status
+            tx_data_to_phy : out std_logic_vector(63 downto 0); -- stored as 64 bits, so we can store data next to the appropriate status. Upper 32 bits = data, lower 32 bits = status
 
             -- to link layer
-            rx_data_to_link    : out std_logic_vector(63 downto 0);
-            tx_data_from_link  : in  std_logic_vector(63 downto 0)
+            rx_data_to_link    : out std_logic_vector(63 downto 0); -- stored as 64 bits, so we can store data next to the appropriate status. Upper 32 bits = data, lower 32 bits = status
+            tx_data_from_link  : in  std_logic_vector(63 downto 0) -- stored as 64 bits, so we can store data next to the appropriate status. Upper 32 bits = data, lower 32 bits = status
         );
     end component;
-
-    component ppm_detector is
-        port(
-            fabric_clk: in std_logic;
-            rxclkout  : in std_logic;
-            rst       : in std_logic;
-
-            ppm_within_threshold : out std_logic
-            );
-    end component ppm_detector;
 
 begin
 
@@ -125,9 +110,9 @@ begin
         port map(
             rxclkout         => rxclkout,
             txclkout         => txclkout,
-            reset            => reset,
+            rst_n            => rst_n,
 
-            rx_ordered_data  => rx_data_from_phy,
+            rx_ordered_data  => rx_data_from_phy, -- good data to pass to link
             primitive_recvd  => primitive_recvd,
 
             rx_data          => rx_data,
@@ -146,80 +131,69 @@ begin
             rx_set_locktoref  => rx_set_locktoref,
             rx_set_locktodata => rx_set_locktodata,
 
-            ppm_within_threshold => ppm_within_threshold,
-
             PHYRDY           => PHYRDY
         );
 
     i_rate_match_blk_1 : rate_match_blk
         port map(
-            fabric_clk => fabric_clk_37_5,
-            rst        => rate_match_clear,
+            fabric_clk => fabric_clk,
+            rst        => rate_match_rst_n, -- clear the fifos
 
             -- from XCVR block
             rxclkout  => rxclkout,
             txclkout  => txclkout,
-            rx_data_from_phy    => rx_data_from_phy_comb,
+            rx_data_from_phy    => rx_data_from_phy_comb, -- clocked with tx/rx clkout
             tx_data_to_phy      => tx_data_to_phy_comb,
 
             -- to link layer
-            rx_data_to_link     => rx_data_to_link_comb,
+            rx_data_to_link     => rx_data_to_link_comb, -- clked with fabric_clk
             tx_data_from_link   => tx_data_from_link_comb
         );
 
-    i_ppm_detector_1 : ppm_detector
-    port map(
-        fabric_clk => fabric_clk_37_5,
-        rxclkout   => rx_pma_clkout,
-        rst        => reset,
-
-        ppm_within_threshold => ppm_within_threshold
-        );
-
     -- assign signals into vector for fifo bufferring
-    phy_status_to_link_s(c_l_primitive_in) <= primitive_recvd;
-    phy_status_to_link_s(c_l_phyrdy) <= PHYRDY;
-    phy_status_to_link_s(c_l_dec_err) <= '0';
-    phy_status_to_link_s(31 downto PHY_STATUS_LENGTH) <= (others => '0');
+    phy_status_to_link_s(c_l_primitive_in) <= primitive_recvd; -- this tells the link layer whether we are receiving a primitive
+    phy_status_to_link_s(c_l_phyrdy) <= PHYRDY; --  tell the link if phyrdy
+    phy_status_to_link_s(c_l_dec_err) <= '0'; -- ignore decoding/8b/10b errors, becasue the link can't respond to them anyway...
+    phy_status_to_link_s(31 downto PHY_STATUS_LENGTH) <= (others => '0'); -- pad rest of status
 
     -- decode link signals from vector use
-    link_status_to_phy_s <= tx_data_to_phy_comb(31 downto 0);
+    link_status_to_phy_s <= tx_data_to_phy_comb(31 downto 0); -- lower 32 bits of combined contain the status
 
     -- decode signal from fifo
-    rx_data_to_link <= rx_data_to_link_comb(63 downto 32);
-    phy_status_to_link  <= rx_data_to_link_comb(PHY_STATUS_LENGTH-1 downto 0);
+    rx_data_to_link <= rx_data_to_link_comb(63 downto 32); -- upper 32 bits of combined contain the data
+    phy_status_to_link  <= rx_data_to_link_comb(PHY_STATUS_LENGTH-1 downto 0); -- lower 32 bits contain the status, but padded to the status length
 
     -- combine signals before storage in fifo
-    tx_data_from_link_comb(63 downto 32) <= tx_data_from_link;
-    tx_data_from_link_comb(LINK_STATUS_LENGTH-1 downto 0) <= link_status_to_phy;
+    tx_data_from_link_comb(63 downto 32) <= tx_data_from_link; -- upper 32 bits contain the data to transmit
+    tx_data_from_link_comb(LINK_STATUS_LENGTH-1 downto 0) <= link_status_to_phy;-- lower 32 bits, padded, contain the status to transmit (primarily whether the phy layer is sending a primitive)
 
-    rx_data_from_phy_comb  <= rx_data_from_phy  & phy_status_to_link_s;
+    rx_data_from_phy_comb  <= rx_data_from_phy  & phy_status_to_link_s; -- combine into data_comb before storing into rate match block
 
     -- acl for fifos
-    process(reset, rxclkout)
+    process(rst_n, rxclkout) -- keep the fifos clear until the physical layer asserts it is ready
     begin
-        if(reset = '1') then
-            rate_match_clear <= '1';
+        if(rst_n = '0') then
+            rate_match_rst_n <= '0';
         elsif(rising_edge(rxclkout)) then
             if(PHYRDY = '1') then
-                rate_match_clear <= '0';
+                rate_match_rst_n <= '1';
             else
-                rate_match_clear <= '1';
+                rate_match_rst_n <= '0';
             end if;
         end if;
     end process;
 
     -- assign tx_data, tx_datak
-    process(reset, txclkout)
+    process(rst_n, txclkout)
     begin
-        if(reset = '1') then
+        if(rst_n = '0') then
             tx_data <= (others => '0');
             tx_datak <= (others => '0');
         elsif(rising_edge(txclkout)) then
-            if(PHYRDY = '0') then
+            if(PHYRDY = '0') then -- before physical layer initialized, just pass out the raw data from the initializaiton state machine.
                 tx_data  <= tx_data_phy_init;
                 tx_datak <= tx_datak_phy_init;
-            else
+            else -- after initialization, decode the data from comb, (upper 32 bits). Also check the input status to determine if we are sending a primitive
                 tx_data <= tx_data_to_phy_comb(63 downto 32);
                 if(link_status_to_phy_s(c_l_primitive_out) = '1') then
                     tx_datak <= DATAK_BYTE_ZERO;

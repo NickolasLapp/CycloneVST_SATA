@@ -11,7 +11,7 @@ end entity rate_match_blk_tb;
 architecture rate_match_blk_tb_arch of rate_match_blk_tb is
 
     signal fabric_clk : std_logic := '0';
-    signal rst        : std_logic := '0';
+    signal rst_n        : std_logic := '0';
 
     -- from XCVR block
     signal rxclkout  : std_logic := '0';
@@ -44,7 +44,7 @@ architecture rate_match_blk_tb_arch of rate_match_blk_tb is
         port
         (
             fabric_clk : in std_logic;
-            rst        : in std_logic;
+            rst_n        : in std_logic;
 
             -- from XCVR block
             rxclkout  : in std_logic;
@@ -62,7 +62,7 @@ begin
     dut : rate_match_blk
         port map(
             fabric_clk => fabric_clk,
-            rst        => rst,
+            rst_n        => rst_n,
 
             -- from XCVR block
             rxclkout  => rxclkout,
@@ -76,13 +76,13 @@ begin
             );
 
     -- Clock generation
-    fabric_clk <= not fabric_clk after CLK75_PERIOD/2 when TbSimEnded /= '1' and rst = '0' else '0';
+    fabric_clk <= not fabric_clk after CLK75_PERIOD/2 when TbSimEnded /= '1' and rst_n = '0' else '0';
 
     stimuli : process
     begin
-        rst <= '1';
+        rst_n <= '0';
         wait for 1000 ns;
-        rst <= '0';
+        rst_n <= '1';
         wait for 1000 ms;
     end process;
 
@@ -91,7 +91,7 @@ begin
         rx_data_from_phy  <= x"0000000000000000";--(others => '0');
         rx_data_from_phy_data  <= (others => '0');
         rx_data_from_phy_status(PHY_STATUS_LENGTH-1 downto 0) <= "0110";
-        wait until rst = '0';
+        wait until rst_n = '1';
         for I in 0 to 30000 loop
             wait until rising_edge(rxclkout);
             if(I mod 255 < 2) then
@@ -112,7 +112,7 @@ begin
     stimuli_tx : process
     begin
         tx_data_from_link <= x"0000000000000000";
-        wait until rst = '0';
+        wait until rst_n = '1';
         for I in 0 to 30000 loop
             wait until rising_edge(fabric_clk);
             if(rx_data_to_link(c_l_pause_all) /= '1' and rx_data_to_link(c_l_phyrdy) = '1') then
@@ -129,7 +129,7 @@ begin
     tx_data_to_phy_data <= tx_data_to_phy(63 downto 32);
     tx_data_to_phy_status <= tx_data_to_phy(LINK_STATUS_LENGTH-1 downto 0);
 
-    rxclkout <= not rxclkout after RxClkoutPeriod/2 when rst = '0' else '0';
-    txclkout <= not txclkout after TxClkoutPeriod/2 when rst = '0' else '0';
+    rxclkout <= not rxclkout after RxClkoutPeriod/2 when rst_n = '1' else '0';
+    txclkout <= not txclkout after TxClkoutPeriod/2 when rst_n = '1' else '0';
 
 end architecture rate_match_blk_tb_arch;
