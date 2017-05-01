@@ -125,18 +125,18 @@ package sata_defines is
     type OOB_STATE_TYPE is (IDLE, SEND_PAUSE, SEND_PULSE);
 
     type PHYINIT_STATE_TYPE is (HP1_HR_Reset,
-                                HP2_HR_AwaitCOMINIT,
-                                HP2B_HR_AwaitNoCOMINIT,
+                                HP2_HR_Await_COMINIT,
+                                HP2B_HR_Await_No_COMINIT,
                                 HP3_HR_Calibrate,
                                 HP4_HR_COMWAKE,
-                                HP5_HR_AwaitCOMWAKE,
-                                HP5B_HR_AwaitNoCOMWAKE,
-                                HP6_HR_AwaitAlign,
-                                HP7_HR_SendAlign,
+                                HP5_HR_Await_COMWAKE,
+                                HP5B_HR_Await_No_COMWAKE,
+                                HP6_HR_Await_Align,
+                                HP7_HR_Send_Align,
                                 HP8_HR_Ready,
                                 HP9_HR_Partial,
                                 HP10_HR_Slumber,
-                                HP11_HR_AdjustSpeed);
+                                HP11_HR_Adjust_Speed);
 
      -- programs
 end sata_defines;
